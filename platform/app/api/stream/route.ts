@@ -1,90 +1,67 @@
 import { getTick, getTableVersion } from "@/lib/sse";
 import { getGameState, listEvents, listTeams, derivedCapital } from "@/lib/store";
+import { streamSnapshotPg } from "@/lib/store.pg";
+import { selectStoreKind } from "@/lib/store.interface";
 import { elapsedMs, remainingInPhaseMs, formatClock } from "@/lib/engines/clock";
 import { ECONOMY } from "@/lib/config";
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const tableNo = url.searchParams.get("table");
+  const tableNo = new URL(req.url).searchParams.get("table");
   const encoder = new TextEncoder();
-
+  const kind = selectStoreKind();
   let lastVersion = -1;
   let closed = false;
-  let lastOutageTick = 0;
 
   const stream = new ReadableStream({
     async start(controller) {
       const send = (data: unknown) => {
-        if (closed) return;
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (!closed) controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
-
       send({ type: "hello", at: Date.now() });
 
       const interval = setInterval(async () => {
-        if (closed) {
-          clearInterval(interval);
-          return;
-        }
+        if (closed) return clearInterval(interval);
         try {
-          const gs = getGameState();
-          if (gs.phase === "C" && Date.now() - lastOutageTick > 10_000) {
-            lastOutageTick = Date.now();
-            await fetch(
-              new URL("/api/outage", req.url).toString(),
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "tick" }),
-              },
-            ).catch(() => undefined);
-          }
-
           const tick = await getTick();
-          const tableV = tableNo
-            ? await getTableVersion(Number(tableNo))
-            : tick.version;
-          const version = tableNo ? tableV : tick.version;
-          if (version === lastVersion) {
-            send({ type: "ping", at: Date.now() });
-            return;
-          }
+          const version = tableNo ? await getTableVersion(Number(tableNo)) : tick.version;
+          if (version === lastVersion) return send({ type: "ping", at: Date.now() });
           lastVersion = version;
-          const teams = listTeams()
-            .map((t) => ({
-              table_no: t.table_no,
-              capital_aed: derivedCapital(t.table_no),
-              display_aed: Math.max(
-                ECONOMY.display_floor,
-                derivedCapital(t.table_no),
-              ),
-              badges: t.badges,
+          const snapshot = kind === "postgres"
+            ? await streamSnapshotPg()
+            : {
+                game: getGameState(),
+                teams: listTeams().map((team) => ({
+                  table_no: team.table_no,
+                  capital_aed: derivedCapital(team.table_no),
+                  badges: team.badges,
+                })),
+                recent: listEvents().slice(-8).reverse().map((event) => ({
+                  table_no: event.table_no,
+                  kind: event.kind,
+                  delta_aed: event.delta_aed,
+                })),
+              };
+          const teams = snapshot.teams
+            .map((team) => ({
+              ...team,
+              display_aed: Math.max(ECONOMY.display_floor, team.capital_aed),
             }))
             .sort((a, b) => b.capital_aed - a.capital_aed);
-
-          const recent = listEvents()
-            .slice(-8)
-            .reverse()
-            .map((e) => ({
-              table_no: e.table_no,
-              kind: e.kind,
-              delta_aed: e.delta_aed,
-            }));
-
           send({
             type: "tick",
             version,
-            phase: gs.phase,
-            banner: gs.narrative_banner,
-            remaining_ms: remainingInPhaseMs(gs),
-            elapsed_ms: elapsedMs(gs),
-            clock: formatClock(remainingInPhaseMs(gs)),
-            paused: Boolean(gs.clock_paused_at),
+            phase: snapshot.game.phase,
+            banner: snapshot.game.narrative_banner,
+            remaining_ms: remainingInPhaseMs(snapshot.game),
+            elapsed_ms: elapsedMs(snapshot.game),
+            clock: formatClock(remainingInPhaseMs(snapshot.game)),
+            paused: Boolean(snapshot.game.clock_paused_at),
             teams,
-            recent,
+            recent: snapshot.recent,
           });
         } catch {
           send({ type: "error", message: "tick failed" });
@@ -94,11 +71,7 @@ export async function GET(req: Request) {
       req.signal.addEventListener("abort", () => {
         closed = true;
         clearInterval(interval);
-        try {
-          controller.close();
-        } catch {
-          /* ignore */
-        }
+        try { controller.close(); } catch { /* already closed */ }
       });
     },
   });

@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS teams (
   outage_active      BOOLEAN DEFAULT FALSE,
   outage_started_at  TIMESTAMPTZ,
   outage_resolved_at TIMESTAMPTZ,
+  outage_scheduled_at TIMESTAMPTZ,
+  outage_extra_hint  BOOLEAN NOT NULL DEFAULT FALSE,
   green_unlocked     BOOLEAN DEFAULT FALSE,
   badges             TEXT[] DEFAULT '{}',
   penalty_cap_aed    INT,
@@ -52,6 +54,16 @@ CREATE TABLE IF NOT EXISTS events (
   idempotency_key    TEXT UNIQUE
 );
 
+CREATE TABLE IF NOT EXISTS operations (
+  idempotency_key     TEXT PRIMARY KEY,
+  scope               TEXT NOT NULL,
+  request_fingerprint TEXT NOT NULL,
+  status              TEXT NOT NULL CHECK (status IN ('pending', 'completed')),
+  response            JSONB,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at        TIMESTAMPTZ
+);
+
 CREATE TABLE IF NOT EXISTS card_positions (
   card_id            TEXT PRIMARY KEY REFERENCES cards(card_id),
   held_by_table      INT NOT NULL,
@@ -67,7 +79,12 @@ CREATE TABLE IF NOT EXISTS game_state (
   narrative_banner   TEXT
 );
 
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS outage_scheduled_at TIMESTAMPTZ;
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS outage_extra_hint BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE INDEX IF NOT EXISTS events_table_idx ON events(table_no);
 CREATE INDEX IF NOT EXISTS events_kind_idx ON events(kind);
 CREATE INDEX IF NOT EXISTS devices_table_idx ON devices(table_no);
 CREATE INDEX IF NOT EXISTS card_positions_held_idx ON card_positions(held_by_table);
+CREATE INDEX IF NOT EXISTS teams_outage_schedule_idx ON teams(outage_scheduled_at)
+  WHERE outage_scheduled_at IS NOT NULL;

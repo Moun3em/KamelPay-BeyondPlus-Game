@@ -5,7 +5,9 @@
 
 import { readFileSync } from "fs";
 import { join } from "path";
+import { createHash } from "node:crypto";
 import { ECONOMY } from "./config";
+import { selectStoreKind } from "./store.interface";
 import type { Role } from "./config";
 import type {
   CardRow,
@@ -43,6 +45,11 @@ interface MemoryDb {
   positions: Map<string, CardPosition>;
   game: GameStateRow;
   eventSeq: number;
+  operations: Map<string, {
+    scope: string;
+    requestFingerprint: string;
+    response: unknown | null;
+  }>;
 }
 
 function emptyGame(): GameStateRow {
@@ -66,6 +73,7 @@ function createEmpty(): MemoryDb {
     positions: new Map(),
     game: emptyGame(),
     eventSeq: 0,
+    operations: new Map(),
   };
 }
 
@@ -80,8 +88,74 @@ function db(): MemoryDb {
   return globalThis.__kp5c_memory;
 }
 
+let memoryQueue: Promise<void> = Promise.resolve();
+
+function cloneMemory(source: MemoryDb): MemoryDb {
+  return {
+    cards: new Map(source.cards),
+    cardsByQr: new Map(source.cardsByQr),
+    teams: new Map([...source.teams].map(([key, value]) => [key, { ...value, badges: [...value.badges] }])),
+    devices: new Map([...source.devices].map(([key, value]) => [key, { ...value }])),
+    events: source.events.map((event) => ({ ...event, meta: event.meta ? { ...event.meta } : null })),
+    positions: new Map([...source.positions].map(([key, value]) => [key, { ...value }])),
+    game: { ...source.game },
+    eventSeq: source.eventSeq,
+    operations: new Map([...source.operations].map(([key, value]) => [key, { ...value }])),
+  };
+}
+
+export type MemoryOperationResult<T> =
+  | { kind: "new" }
+  | { kind: "replay"; response: T }
+  | { kind: "conflict" };
+
+export function beginMemoryOperation<T>(
+  key: string,
+  scope: string,
+  request: unknown,
+): MemoryOperationResult<T> {
+  const requestFingerprint = createHash("sha256").update(JSON.stringify(request)).digest("hex");
+  const existing = db().operations.get(key);
+  if (!existing) {
+    db().operations.set(key, { scope, requestFingerprint, response: null });
+    return { kind: "new" };
+  }
+  if (existing.scope !== scope || existing.requestFingerprint !== requestFingerprint) {
+    return { kind: "conflict" };
+  }
+  if (existing.response == null) throw new Error("Memory operation is still pending");
+  return { kind: "replay", response: existing.response as T };
+}
+
+export function completeMemoryOperation(key: string, response: unknown): void {
+  const existing = db().operations.get(key);
+  if (!existing) throw new Error("Memory operation was not reserved");
+  db().operations.set(key, { ...existing, response });
+}
+
+export function cancelMemoryOperation(key: string): void {
+  db().operations.delete(key);
+}
+
+/** Serial, rollback-capable transaction used only by the explicit dev/test adapter. */
+export async function withMemoryTransaction<T>(fn: () => Promise<T>): Promise<T> {
+  let release!: () => void;
+  const prior = memoryQueue;
+  memoryQueue = new Promise<void>((resolve) => { release = resolve; });
+  await prior;
+  const snapshot = cloneMemory(db());
+  try {
+    return await fn();
+  } catch (error) {
+    globalThis.__kp5c_memory = snapshot;
+    throw error;
+  } finally {
+    release();
+  }
+}
+
 export function usingMemoryStore(): boolean {
-  return !process.env.POSTGRES_URL && !process.env.DATABASE_URL;
+  return selectStoreKind() === "memory";
 }
 
 export function loadSeedIntoMemory(seedPath?: string): {
@@ -118,6 +192,9 @@ export function loadSeedIntoMemory(seedPath?: string): {
       final_multiplier: false,
       outage_loss_aed: 0,
       outage_wrong_tries: 0,
+      outage_scheduled_at: null,
+      outage_started_at: null,
+      outage_extra_hint: false,
     });
   }
 

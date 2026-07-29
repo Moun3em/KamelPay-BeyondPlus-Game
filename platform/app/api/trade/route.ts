@@ -1,99 +1,103 @@
 import { NextResponse } from "next/server";
+import { consoleTokenFromRequest, requireConsoleToken, AuthError } from "@/lib/auth";
 import {
   appendEvent,
+  beginMemoryOperation,
+  completeMemoryOperation,
   getCardById,
+  getGameState,
   getPosition,
   getTeam,
   setPosition,
-  listEvents,
-  getGameState,
+  withMemoryTransaction,
 } from "@/lib/store";
 import { scoreTradeValidated } from "@/lib/scoring";
 import { inFinalFiveMinutes } from "@/lib/engines/clock";
+import { selectStoreKind } from "@/lib/store.interface";
+import { executeTradePg, MutationError } from "@/lib/store.pg";
 import { publishTable } from "@/lib/sse";
 
 export const runtime = "nodejs";
 
-/**
- * ASP station trade validation.
- * Body: { cardId, fromTable, toTable, doubled? }
- * Moves ownership of a foreign valid invoice to its owner and awards network bonus both sides.
- */
 export async function POST(req: Request) {
-  const body = (await req.json()) as {
-    cardId?: string;
-    fromTable?: number;
-    toTable?: number;
-    doubled?: boolean;
-    idempotencyKey?: string;
-  };
+  try {
+    requireConsoleToken(consoleTokenFromRequest(req));
+    const raw: unknown = await req.json();
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return NextResponse.json({ error: "Invalid trade command" }, { status: 400 });
+    }
+    const body = raw as Record<string, unknown>;
+    const allowed = new Set(["cardId", "fromTable", "toTable", "doubled", "idempotencyKey", "reason"]);
+    if (Object.keys(body).some((key) => !allowed.has(key)) ||
+        typeof body.cardId !== "string" || !/^[A-Z0-9-]{1,64}$/i.test(body.cardId) ||
+        typeof body.fromTable !== "number" || !Number.isInteger(body.fromTable) || body.fromTable < 1 || body.fromTable > 10 ||
+        typeof body.toTable !== "number" || !Number.isInteger(body.toTable) || body.toTable < 1 || body.toTable > 10 ||
+        body.fromTable === body.toTable || typeof body.doubled !== "boolean" ||
+        typeof body.idempotencyKey !== "string" || body.idempotencyKey.length < 1 || body.idempotencyKey.length > 200 ||
+        typeof body.reason !== "string" || body.reason.trim().length < 1 || body.reason.trim().length > 500) {
+      return NextResponse.json(
+        { error: "cardId, distinct valid tables, boolean doubled, reason, and idempotencyKey required" },
+        { status: 400 },
+      );
+    }
+    const cardId = body.cardId.toUpperCase();
+    const fromTable = body.fromTable;
+    const toTable = body.toTable;
+    const doubled = body.doubled;
+    const key = body.idempotencyKey;
+    const reason = body.reason.trim();
 
-  const gs = getGameState();
-  if (gs.phase === "FROZEN" || gs.phase === "DEBRIEF" || gs.phase === "LOBBY") {
-    return NextResponse.json({ error: "Frozen or not in trade phase" }, { status: 409 });
+    const kind = selectStoreKind();
+    const result = kind === "postgres"
+      ? await executeTradePg({ cardId, fromTable, toTable, doubled, idempotencyKey: key, reason })
+      : await withMemoryTransaction(async () => {
+          type TradeResult = { ok: true; replay: boolean; card_id: string; now_held_by: number };
+          const operation = beginMemoryOperation<TradeResult>(key, "console:trade", {
+            cardId, fromTable, toTable, doubled, reason,
+          });
+          if (operation.kind === "conflict") {
+            throw new MutationError("Idempotency key was already used for a different request", 409);
+          }
+          if (operation.kind === "replay") return { ...operation.response, replay: true };
+          const gs = getGameState();
+          if (gs.phase !== "B" && gs.phase !== "C") throw new MutationError("Trades only in Phase B or C", 409);
+          const card = getCardById(cardId);
+          const position = getPosition(cardId);
+          if (!card) throw new MutationError("Card not found", 404);
+          if (!position || position.held_by_table !== fromTable) throw new MutationError("From-table does not hold this card", 409);
+          if (card.owner_table !== toTable || card.validity !== "VALID" || card.deck !== "RED") {
+            throw new MutationError("Invalid trade", 409);
+          }
+          const from = getTeam(fromTable);
+          const to = getTeam(toTable);
+          if (!from || !to) throw new MutationError("Unknown trade table", 404);
+          setPosition(cardId, { held_by_table: toTable, state: "PENDING" });
+          for (const [tableNo, state] of [[fromTable, from], [toTable, to]] as const) {
+            const scored = scoreTradeValidated(state, {
+              cardId,
+              doubled,
+              inFinalWindow: inFinalFiveMinutes(gs),
+            });
+            appendEvent({
+              table_no: tableNo,
+              actor_role: "FACILITATOR",
+              kind: scored.kind,
+              card_id: cardId,
+              delta_aed: scored.delta_aed,
+              idempotency_key: `${key}:${tableNo}`,
+              meta: { modal: scored.modal, counterparty: tableNo === fromTable ? toTable : fromTable, reason },
+            });
+          }
+          const response = { ok: true as const, replay: false, card_id: cardId, now_held_by: toTable };
+          completeMemoryOperation(key, response);
+          return response;
+        });
+    await Promise.all([publishTable(fromTable), publishTable(toTable)]);
+    return NextResponse.json(result);
+  } catch (error) {
+    if (error instanceof AuthError || error instanceof MutationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
   }
-  if (gs.phase !== "B" && gs.phase !== "C") {
-    return NextResponse.json(
-      { error: "Trades only in Phase B or C" },
-      { status: 409 },
-    );
-  }
-
-  const cardId = String(body.cardId ?? "").toUpperCase();
-  const fromTable = Number(body.fromTable);
-  const toTable = Number(body.toTable);
-  const card = getCardById(cardId);
-  if (!card) return NextResponse.json({ error: "Card not found" }, { status: 404 });
-
-  const pos = getPosition(cardId);
-  if (!pos || pos.held_by_table !== fromTable) {
-    return NextResponse.json(
-      { error: "From-table does not hold this card" },
-      { status: 409 },
-    );
-  }
-  if (card.owner_table !== toTable) {
-    return NextResponse.json(
-      { error: "To-table is not the owner of this invoice" },
-      { status: 409 },
-    );
-  }
-  if (card.validity !== "VALID" || card.deck !== "RED") {
-    return NextResponse.json({ error: "Only valid red invoices trade" }, { status: 400 });
-  }
-
-  const key = body.idempotencyKey ?? `trade:${cardId}:${fromTable}:${toTable}`;
-  const prior = listEvents(fromTable).find((e) => e.idempotency_key === key);
-  if (prior) {
-    return NextResponse.json({ ok: true, replay: true });
-  }
-
-  // Transfer hold to owner
-  setPosition(cardId, { held_by_table: toTable, state: "PENDING" });
-
-  const finalWindow = inFinalFiveMinutes(gs);
-  for (const tableNo of [fromTable, toTable]) {
-    const team = getTeam(tableNo)!;
-    const scored = scoreTradeValidated(team, {
-      cardId,
-      doubled: Boolean(body.doubled),
-      inFinalWindow: finalWindow,
-    });
-    appendEvent({
-      table_no: tableNo,
-      actor_role: "ASP",
-      kind: scored.kind,
-      card_id: cardId,
-      delta_aed: scored.delta_aed,
-      idempotency_key: `${key}:${tableNo}`,
-      meta: { modal: scored.modal, counterparty: tableNo === fromTable ? toTable : fromTable },
-    });
-    await publishTable(tableNo);
-  }
-
-  return NextResponse.json({
-    ok: true,
-    card_id: cardId,
-    now_held_by: toTable,
-  });
 }

@@ -73,7 +73,12 @@ export default function ConsolePage() {
     const res = await fetch("/api/console", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, ...extra }),
+      body: JSON.stringify({
+        action,
+        reason,
+        idempotencyKey: crypto.randomUUID(),
+        ...extra,
+      }),
     });
     if (!res.ok) {
       const j = await res.json();
@@ -125,6 +130,15 @@ export default function ConsolePage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <label className="font-semibold">
+            Audit reason (required for every action)
+            <input
+              className="tap mt-1 w-full min-w-72 rounded border-2 border-[var(--fg)] bg-transparent px-3"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Why is this intervention required?"
+            />
+          </label>
           <button
             type="button"
             className="tap rounded border-2 border-[var(--c1)] px-3 font-bold"
@@ -249,14 +263,7 @@ export default function ConsolePage() {
             onChange={(e) => setAdjustAmount(e.target.value)}
           />
         </label>
-        <label className="font-semibold">
-          Reason (required)
-          <input
-            className="tap mt-1 w-full rounded border-2 border-[var(--fg)] bg-transparent px-3"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-        </label>
+
         <button
           type="button"
           className="tap rounded border-2 border-[var(--fg)] font-semibold"
@@ -336,6 +343,9 @@ export default function ConsolePage() {
                 cardId: tradeCard,
                 fromTable: Number(tradeFrom),
                 toTable: Number(tradeTo),
+                doubled: false,
+                reason,
+                idempotencyKey: crypto.randomUUID(),
               }),
             });
             if (!res.ok) {

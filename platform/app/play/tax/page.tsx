@@ -79,7 +79,6 @@ export default function TaxScannerPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            deviceId: session.deviceId,
             action,
             idempotencyKey,
             qr: scannedCode ?? undefined,

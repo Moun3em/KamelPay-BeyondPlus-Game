@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { getConfig, PHASES, type Phase } from "@/lib/config";
-import { CONSOLE_COOKIE } from "@/lib/session";
+
+import { getConfig, type Phase } from "@/lib/config";
+import { CONSOLE_COOKIE, consoleSessionCookieValue, sessionCookieOptions } from "@/lib/session";
+import { consoleTokenFromRequest, requireConsoleToken, AuthError } from "@/lib/auth";
+import { validateFacilitatorCommand } from "@/lib/facilitator";
+import { armMemoryOutagesUnlocked } from "@/lib/outage.store";
+import { selectStoreKind } from "@/lib/store.interface";
+import { executeFacilitatorPg, MutationError } from "@/lib/store.pg";
 import {
   appendEvent,
+  beginMemoryOperation,
+  completeMemoryOperation,
   getTeam,
   listTeams,
   releaseDevice,
@@ -12,6 +19,7 @@ import {
   getGameState,
   updateTeam,
   derivedCapital,
+  withMemoryTransaction,
 } from "@/lib/store";
 import { publishGlobal, publishTable } from "@/lib/sse";
 import { scoreOutageResolved } from "@/lib/scoring";
@@ -19,11 +27,6 @@ import { isBadgeCode } from "@/lib/engines/badges";
 import type { Role } from "@/lib/config";
 
 export const runtime = "nodejs";
-
-async function requireConsole() {
-  const jar = await cookies();
-  return jar.get(CONSOLE_COOKIE)?.value === "1";
-}
 
 export async function POST(req: Request) {
   const body = (await req.json()) as {
@@ -37,6 +40,7 @@ export async function POST(req: Request) {
     deviceId?: string;
     banner?: string;
     phase?: Phase;
+    idempotencyKey?: string;
   };
 
   if (body.action === "login") {
@@ -44,46 +48,65 @@ export async function POST(req: Request) {
     if (body.pin !== cfg.facilitatorPin) {
       return NextResponse.json({ error: "Bad facilitator PIN" }, { status: 401 });
     }
-    const jar = await cookies();
-    jar.set(CONSOLE_COOKIE, "1", {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 12,
-    });
-    return NextResponse.json({ ok: true });
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set(CONSOLE_COOKIE, consoleSessionCookieValue(), sessionCookieOptions());
+    return response;
   }
 
-  if (!(await requireConsole())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    requireConsoleToken(consoleTokenFromRequest(req));
+    const command = validateFacilitatorCommand(body);
+    if (selectStoreKind() === "postgres") {
+      const result = await executeFacilitatorPg(command);
+      await publishGlobal();
+      return NextResponse.json(result);
+    }
+
+    return await withMemoryTransaction(async () => {
+      const operationKey = `console:${command.idempotencyKey}`;
+      const operation = beginMemoryOperation<Record<string, unknown>>(
+        operationKey, "console:facilitator", command,
+      );
+      if (operation.kind === "conflict") {
+        return NextResponse.json(
+          { error: "Idempotency key was already used for a different request" },
+          { status: 409 },
+        );
+      }
+      if (operation.kind === "replay") {
+        return NextResponse.json({ ...operation.response, replay: true });
+      }
+      appendEvent({
+        table_no: "tableNo" in command ? command.tableNo : 0, actor_role: "FACILITATOR", kind: "FACILITATOR_ACTION",
+        delta_aed: 0, idempotency_key: operationKey,
+        meta: { action: command.action, reason: command.reason },
+      });
 
   const gs = getGameState();
 
-  switch (body.action) {
+  const response = await (async () => {
+  switch (command.action) {
     case "set_phase": {
-      if (!body.phase || !PHASES.includes(body.phase)) {
-        return NextResponse.json({ error: "Invalid phase" }, { status: 400 });
-      }
-      const patch: Parameters<typeof setGameState>[0] = { phase: body.phase };
+      const patch: Parameters<typeof setGameState>[0] = { phase: command.phase };
       if (
-        (body.phase === "TUTORIAL" || body.phase === "A") &&
+        (command.phase === "TUTORIAL" || command.phase === "A") &&
         !gs.clock_started_at
       ) {
         patch.clock_started_at = new Date().toISOString();
       }
-      if (body.phase === "FROZEN") {
+      if (command.phase === "FROZEN") {
         patch.clock_paused_at = new Date().toISOString();
       }
       setGameState(patch);
+      if (command.phase === "C") await armMemoryOutagesUnlocked(new Date());
       appendEvent({
         table_no: 0,
         actor_role: "FACILITATOR",
         kind: "PHASE_CHANGE",
         delta_aed: 0,
-        meta: { phase: body.phase },
+        meta: { phase: command.phase },
       });
-      await publishGlobal({ phase: body.phase });
+      await publishGlobal({ phase: command.phase });
       return NextResponse.json({ ok: true, game: getGameState() });
     }
     case "pause": {
@@ -106,25 +129,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, paused: false });
     }
     case "broadcast": {
-      setGameState({ narrative_banner: body.banner ?? null });
-      await publishGlobal({ banner: body.banner ?? null });
+      setGameState({ narrative_banner: command.banner || null });
+      await publishGlobal({ banner: command.banner || null });
       return NextResponse.json({ ok: true });
     }
     case "adjust": {
-      const tableNo = Number(body.tableNo);
+      const tableNo = command.tableNo;
       if (!getTeam(tableNo)) {
         return NextResponse.json({ error: "Unknown table" }, { status: 404 });
       }
-      if (!body.reason?.trim()) {
-        return NextResponse.json({ error: "Reason required" }, { status: 400 });
-      }
-      const amount = Number(body.amount ?? 0);
+      const amount = command.amount;
       appendEvent({
         table_no: tableNo,
         actor_role: "FACILITATOR",
         kind: "FACILITATOR_ADJUST",
         delta_aed: amount,
-        meta: { reason: body.reason },
+        meta: { reason: command.reason },
       });
       await publishTable(tableNo);
       return NextResponse.json({
@@ -133,7 +153,7 @@ export async function POST(req: Request) {
       });
     }
     case "force_resolve_outage": {
-      const tableNo = Number(body.tableNo);
+      const tableNo = command.tableNo;
       const team = getTeam(tableNo);
       if (!team) return NextResponse.json({ error: "Unknown table" }, { status: 404 });
       const scored = scoreOutageResolved();
@@ -152,14 +172,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
     case "unlock_green": {
-      const tableNo = Number(body.tableNo);
+      const tableNo = command.tableNo;
       updateTeam(tableNo, { green_unlocked: true });
       await publishTable(tableNo);
       return NextResponse.json({ ok: true });
     }
     case "award_badge": {
-      const tableNo = Number(body.tableNo);
-      const badge = body.badge ?? "";
+      const tableNo = command.tableNo;
+      const badge = command.badge;
       if (!isBadgeCode(badge)) {
         return NextResponse.json({ error: "Unknown badge" }, { status: 400 });
       }
@@ -196,13 +216,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
     case "release_role": {
-      const tableNo = Number(body.tableNo);
-      releaseRole(tableNo, body.role as Role);
+      const tableNo = command.tableNo;
+      releaseRole(tableNo, command.role as Role);
       await publishTable(tableNo);
       return NextResponse.json({ ok: true });
     }
     case "reset_device": {
-      if (body.deviceId) releaseDevice(body.deviceId);
+      releaseDevice(command.deviceId);
       return NextResponse.json({ ok: true });
     }
     case "kill": {
@@ -211,6 +231,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
     default:
-      return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+      throw new MutationError("Unknown action", 400);
+  }
+  })();
+  const responseBody = await response.clone().json() as Record<string, unknown>;
+  completeMemoryOperation(operationKey, responseBody);
+  return response;
+    });
+  } catch (error) {
+    if (error instanceof AuthError || error instanceof MutationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
   }
 }

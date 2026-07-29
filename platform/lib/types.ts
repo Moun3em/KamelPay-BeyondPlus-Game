@@ -20,11 +20,13 @@ export type EventKind =
   | "TRADE_VALIDATED"
   | "LEDGER_CLOSED"
   | "OUTAGE_TICK"
+  | "OUTAGE_ARMED"
   | "OUTAGE_RESOLVED"
   | "GREEN_PLAYED"
   | "BLUE_PLAYED"
   | "PRACTICE_SCAN"
   | "FACILITATOR_ADJUST"
+  | "FACILITATOR_ACTION"
   | "BADGE_AWARDED"
   | "ROLE_CLAIMED"
   | "PHASE_CHANGE";
@@ -73,6 +75,9 @@ export interface TeamState {
   final_multiplier: boolean;
   outage_loss_aed: number;
   outage_wrong_tries: number;
+  outage_scheduled_at?: string | null;
+  outage_started_at?: string | null;
+  outage_extra_hint?: boolean;
 }
 
 export interface TeachingModal {

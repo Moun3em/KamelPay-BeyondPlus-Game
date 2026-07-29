@@ -8,7 +8,9 @@ import { inFinalFiveMinutes } from "./engines/clock";
 import { publishTable } from "./sse";
 import {
   appendEvent,
-  findEventByIdempotency,
+  beginMemoryOperation,
+  cancelMemoryOperation,
+  completeMemoryOperation,
   getCardById,
   getCardByQr,
   getDevice,
@@ -19,8 +21,9 @@ import {
   ownValidFiledCount,
   setPosition,
   updateTeam,
+  withMemoryTransaction,
 } from "./store";
-import type { CardAction, TeachingModal } from "./types";
+import type { CardAction, DeviceSession, TeachingModal } from "./types";
 
 export type ScanBody = {
   qr?: string;
@@ -42,28 +45,34 @@ export type ScanResponse =
   | { ok: false; status: number; error: string; hint?: string };
 
 export async function executeScan(body: ScanBody): Promise<ScanResponse> {
-  const existing = findEventByIdempotency(body.idempotencyKey);
-  if (existing) {
-    const team = getTeam(existing.table_no);
-    const modal = (existing.meta?.modal as TeachingModal) ?? {
-      title: existing.kind,
-      kind: existing.kind as TeachingModal["kind"],
-      delta_aed: existing.delta_aed,
-      why: "Replay of prior result (idempotent).",
-      icon: "info" as const,
-      word: "Replay",
-      card_id: existing.card_id ?? "",
-    };
-    return {
-      ok: true,
-      replay: true,
-      delta_aed: existing.delta_aed,
-      kind: existing.kind,
-      capital_aed: team?.capital_aed ?? 0,
-      modal,
-    };
-  }
+  return withMemoryTransaction(async () => {
+    const device = getDevice(body.deviceId);
+    if (!device) return executeScanUnlocked(body);
+    const eventKey = `scan:${body.deviceId}:${body.idempotencyKey}`;
+    const operation = beginMemoryOperation<Extract<ScanResponse, { ok: true }>>(
+      body.idempotencyKey,
+      `scan:${body.deviceId}:${device.table_no}`,
+      { qr: body.qr ?? null, cardId: body.cardId?.toUpperCase() ?? null, action: body.action },
+    );
+    if (operation.kind === "conflict") {
+      return { ok: false, status: 409, error: "Idempotency key was already used for a different request" };
+    }
+    if (operation.kind === "replay") return { ...operation.response, replay: true };
+    const response = await executeScanUnlocked(body, eventKey);
+    if (response.ok) completeMemoryOperation(body.idempotencyKey, response);
+    else cancelMemoryOperation(body.idempotencyKey);
+    return response;
+  });
+}
 
+export async function executeMemoryScan(
+  session: DeviceSession,
+  body: Omit<ScanBody, "deviceId">,
+): Promise<ScanResponse> {
+  return executeScan({ ...body, deviceId: session.deviceId });
+}
+
+async function executeScanUnlocked(body: ScanBody, eventKey = body.idempotencyKey): Promise<ScanResponse> {
   const device = getDevice(body.deviceId);
   if (!device) {
     return { ok: false, status: 401, error: "Device not joined. Re-enter table PIN." };
@@ -152,7 +161,7 @@ export async function executeScan(body: ScanBody): Promise<ScanResponse> {
       kind: scored.kind,
       card_id: card.card_id,
       delta_aed: scored.delta_aed,
-      idempotency_key: body.idempotencyKey,
+      idempotency_key: eventKey,
       meta: { modal: scored.modal, flags: scored.flags },
     });
     setPosition(card.card_id, { state: "PLAYED" });
@@ -172,7 +181,7 @@ export async function executeScan(body: ScanBody): Promise<ScanResponse> {
     const refreshed = getTeam(device.table_no)!;
     return {
       ok: true,
-      replay: event.idempotency_key !== body.idempotencyKey,
+      replay: event.idempotency_key !== eventKey,
       delta_aed: scored.delta_aed,
       kind: scored.kind,
       capital_aed: refreshed.capital_aed,
@@ -194,7 +203,7 @@ export async function executeScan(body: ScanBody): Promise<ScanResponse> {
       kind: scored.kind,
       card_id: card.card_id,
       delta_aed: scored.delta_aed,
-      idempotency_key: body.idempotencyKey,
+      idempotency_key: eventKey,
       meta: { modal: scored.modal },
     });
     await publishTable(device.table_no);
@@ -235,7 +244,7 @@ export async function executeScan(body: ScanBody): Promise<ScanResponse> {
     kind: scored.kind,
     card_id: card.card_id,
     delta_aed: scored.delta_aed,
-    idempotency_key: body.idempotencyKey,
+    idempotency_key: eventKey,
     meta: { modal: scored.modal },
   });
 
@@ -248,7 +257,7 @@ export async function executeScan(body: ScanBody): Promise<ScanResponse> {
         actor_role: device.role,
         kind: close.kind,
         delta_aed: close.delta_aed,
-        idempotency_key: `${body.idempotencyKey}:ledger`,
+        idempotency_key: `${eventKey}:ledger`,
         meta: { modal: close.modal },
       });
       updateTeam(device.table_no, { ledger_closed: true });
