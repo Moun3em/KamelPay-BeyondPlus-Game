@@ -144,13 +144,16 @@ async function executeScanUnlocked(body: ScanBody, eventKey = body.idempotencyKe
       card_id: card.card_id,
     };
     return {
-      ok: true,
+      ok: false,
+      status: 409,
+      error: `Card already ${pos.state.toLowerCase()}.`,
+      hint: prior?.kind ?? pos.state,
+      modal,
       replay: true,
       delta_aed: prior?.delta_aed ?? 0,
-      kind: prior?.kind ?? pos.state,
       capital_aed: team.capital_aed,
-      modal,
-    };
+      kind: prior?.kind ?? pos.state,
+    } as unknown as ScanResponse;
   }
 
   const finalWindow = inFinalFiveMinutes(gs);

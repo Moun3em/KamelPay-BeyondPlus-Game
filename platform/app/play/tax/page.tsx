@@ -86,6 +86,13 @@ export default function TaxScannerPage() {
           }),
         });
         const json = await res.json();
+        if (json.modal) {
+          sessionStorage.removeItem("kp5c_pending_key");
+          setModal(json.modal);
+          setScannedCode(null);
+          setCardId("");
+          return;
+        }
         if (!res.ok) {
           setActionError(
             [json.error, json.hint].filter(Boolean).join(" — ") ||
