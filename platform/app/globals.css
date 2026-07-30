@@ -21,6 +21,24 @@
   }
 }
 
+@media (prefers-contrast: more) {
+  :root {
+    --c1: #ff2a30;
+    --c2: #1a4cff;
+    --c3: #00a35c;
+    --c4: #ff5500;
+    --c5: #6f1fbf;
+    --muted: #000000;
+    --line: #000000;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --muted: #ffffff;
+      --line: #ffffff;
+    }
+  }
+}
+
 html,
 body {
   background: var(--bg);
