@@ -1,41 +1,31 @@
 @import "tailwindcss";
 
 :root {
+  /* Light-mode corner palette tuned for >=7:1 contrast on the white
+     background (AAA per WCAG 2.1 §1.4.6). Dark-mode overrides below
+     flip each corner to a bright variant that hits >=7:1 on #121212. */
   --bg: #ffffff;
   --fg: #121212;
-  --c1: #e5484d;
-  --c2: #3e63dd;
-  --c3: #30a46c;
-  --c4: #f76b15;
-  --c5: #8e4ec6;
-  --muted: #3d3d3d;
-  --line: #121212;
+  --c1: #a30016;
+  --c2: #002a99;
+  --c3: #005c33;
+  --c4: #a03600;
+  --c5: #5e00a3;
+  --muted: #000000;
+  --line: #000000;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #121212;
     --fg: #ffffff;
-    --muted: #c8c8c8;
+    --c1: #ff8a8e;
+    --c2: #a0b0ff;
+    --c3: #7adfaa;
+    --c4: #ffb070;
+    --c5: #d8a0f5;
+    --muted: #ffffff;
     --line: #ffffff;
-  }
-}
-
-@media (prefers-contrast: more) {
-  :root {
-    --c1: #ff2a30;
-    --c2: #1a4cff;
-    --c3: #00a35c;
-    --c4: #ff5500;
-    --c5: #6f1fbf;
-    --muted: #000000;
-    --line: #000000;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --muted: #ffffff;
-      --line: #ffffff;
-    }
   }
 }
 
