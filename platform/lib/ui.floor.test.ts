@@ -70,11 +70,13 @@ describe("UI floor — PRD §6 / AGENTS.md", () => {
   });
 
   it("ships a 48x48 tap target on every player-facing primary action", () => {
-    // Check the Tax scanner page and the role-claim page — the two player pages
-    // with action buttons. The other player screens are read-only / auto-routed.
+    // Check all surfaces that contain interactive buttons. The global `.tap`
+    // CSS class (globals.css) provides min-h:48 / min-w:48; we also accept
+    // explicit Tailwind tokens or arbitrary >= 48px sizes.
     const tapSurfaces = [
       "play/tax/page.tsx",
       "join/page.tsx",
+      "join/JoinClient.tsx",
     ];
     const offenders: { file: string; reason: string }[] = [];
     for (const rel of tapSurfaces) {
@@ -102,6 +104,8 @@ describe("UI floor — PRD §6 / AGENTS.md", () => {
           const m2 = t.match(/^(?:h|w|min-h|min-w)-\[(\d+)px\]$/);
           if (m2 && Number(m2[1]) >= 48) { has48 = true; break; }
         }
+        // The global `.tap` class (globals.css) also satisfies the 48×48 floor.
+        if (!has48 && /(^|\s)tap(\s|$)/.test(cls)) has48 = true;
         if (!has48) {
           offenders.push({ file: rel, reason: `button lacks 48×48 token: ${tag.slice(0, 80)}…` });
         }
