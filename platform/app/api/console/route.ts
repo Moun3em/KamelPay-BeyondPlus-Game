@@ -4,12 +4,14 @@ import { getConfig, type Phase } from "@/lib/config";
 import { CONSOLE_COOKIE, consoleSessionCookieValue, sessionCookieOptions } from "@/lib/session";
 import { consoleTokenFromRequest, requireConsoleToken, AuthError } from "@/lib/auth";
 import { validateFacilitatorCommand } from "@/lib/facilitator";
-import { armMemoryOutagesUnlocked } from "@/lib/outage.store";
+import { armMemoryOutagesUnlocked, shiftMemoryOutageTimes } from "@/lib/outage.store";
+import { advanceMemoryTimelineUnlocked, isForwardPhaseTransition, manualPhaseClockPatch } from "@/lib/timeline";
 import { selectStoreKind } from "@/lib/store.interface";
 import { executeFacilitatorPg, MutationError } from "@/lib/store.pg";
 import {
   appendEvent,
   beginMemoryOperation,
+  cancelMemoryOperation,
   completeMemoryOperation,
   getTeam,
   listTeams,
@@ -76,6 +78,12 @@ export async function POST(req: Request) {
       if (operation.kind === "replay") {
         return NextResponse.json({ ...operation.response, replay: true });
       }
+      await advanceMemoryTimelineUnlocked(new Date());
+      const reconciledGame = getGameState();
+      if (command.action === "adjust" && (reconciledGame.phase === "FROZEN" || reconciledGame.phase === "DEBRIEF")) {
+        cancelMemoryOperation(operationKey);
+        return NextResponse.json({ error: "Leaderboard is locked after final freeze" }, { status: 409 });
+      }
       appendEvent({
         table_no: "tableNo" in command ? command.tableNo : 0, actor_role: "FACILITATOR", kind: "FACILITATOR_ACTION",
         delta_aed: 0, idempotency_key: operationKey,
@@ -87,24 +95,19 @@ export async function POST(req: Request) {
   const response = await (async () => {
   switch (command.action) {
     case "set_phase": {
-      const patch: Parameters<typeof setGameState>[0] = { phase: command.phase };
-      if (
-        (command.phase === "TUTORIAL" || command.phase === "A") &&
-        !gs.clock_started_at
-      ) {
-        patch.clock_started_at = new Date().toISOString();
+      if (!isForwardPhaseTransition(gs.phase, command.phase)) {
+        throw new MutationError("Phase controls only move forward; use pause or kill for recovery", 409);
       }
-      if (command.phase === "FROZEN") {
-        patch.clock_paused_at = new Date().toISOString();
-      }
-      setGameState(patch);
-      if (command.phase === "C") await armMemoryOutagesUnlocked(new Date());
+      const now = new Date();
+      setGameState(manualPhaseClockPatch(command.phase, now));
+      if (command.phase === "C") await armMemoryOutagesUnlocked(now);
       appendEvent({
         table_no: 0,
         actor_role: "FACILITATOR",
         kind: "PHASE_CHANGE",
         delta_aed: 0,
-        meta: { phase: command.phase },
+        idempotency_key: `${operationKey}:phase`,
+        meta: { phase: command.phase, via: "facilitator", reason: command.reason },
       });
       await publishGlobal({ phase: command.phase });
       return NextResponse.json({ ok: true, game: getGameState() });
@@ -120,6 +123,7 @@ export async function POST(req: Request) {
       if (gs.clock_paused_at) {
         const pausedAt = new Date(gs.clock_paused_at).getTime();
         const add = Date.now() - pausedAt;
+        shiftMemoryOutageTimes(add);
         setGameState({
           clock_paused_at: null,
           paused_ms_total: (gs.paused_ms_total ?? 0) + add,
@@ -134,6 +138,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
     case "adjust": {
+      if (gs.phase === "FROZEN" || gs.phase === "DEBRIEF") {
+        throw new MutationError("Leaderboard is locked after final freeze", 409);
+      }
       const tableNo = command.tableNo;
       if (!getTeam(tableNo)) {
         return NextResponse.json({ error: "Unknown table" }, { status: 404 });

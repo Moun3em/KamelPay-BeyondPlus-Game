@@ -1,5 +1,6 @@
 import { sql, withTransaction, type TransactionClient } from "./db";
-import { inFinalFiveMinutes } from "./engines/clock";
+import { elapsedMs, inFinalFiveMinutes, phaseFromElapsed } from "./engines/clock";
+import { crossedTimedPhases, isForwardPhaseTransition, phaseStartElapsedMs } from "./timeline";
 import { outageOffsetSeconds } from "./engines/outage";
 import {
   scoreGreenPlay,
@@ -164,6 +165,24 @@ async function completeOperation(client: TransactionClient, key: string, respons
   );
 }
 
+type CommittedFailure = { committedFailure: true; error: string; status: number };
+
+function committedFailure(error: string, status: number): CommittedFailure {
+  return { committedFailure: true, error, status };
+}
+
+async function discardOperation(client: TransactionClient, key: string): Promise<void> {
+  await client.query("DELETE FROM operations WHERE idempotency_key = $1 AND status = 'pending'", [key]);
+}
+
+function throwIfCommittedFailure<T>(result: T | CommittedFailure): T {
+  if (typeof result === "object" && result !== null && "committedFailure" in result) {
+    const failure = result as CommittedFailure;
+    throw new MutationError(failure.error, failure.status);
+  }
+  return result as T;
+}
+
 function replayResponse(event: PgEvent, capital: number) {
   const modal = event.meta?.modal as TeachingModal | undefined;
   return {
@@ -264,6 +283,11 @@ export async function executeScanPg(
       request: { qr: input.qr ?? null, cardId: input.cardId?.toUpperCase() ?? null, action: input.action },
     });
     if (replay) return { ...replay, replay: true };
+    const timeline = await advanceTimelineTx(client, new Date());
+    if (timeline.phase === "FROZEN" || timeline.phase === "DEBRIEF") {
+      await discardOperation(client, operationKey);
+      return { ok: false as const, status: 409, error: "Game frozen. Writes rejected." };
+    }
 
     const durable = await queryOne(
       client,
@@ -470,7 +494,7 @@ export async function executeTradePg(input: {
   idempotencyKey: string;
   reason: string;
 }) {
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const operationKey = `trade:${input.idempotencyKey}`;
     const replay = await beginOperation(client, {
       key: operationKey,
@@ -478,6 +502,11 @@ export async function executeTradePg(input: {
       request: { cardId: input.cardId, fromTable: input.fromTable, toTable: input.toTable, doubled: input.doubled, reason: input.reason },
     });
     if (replay) return { ...replay, replay: true };
+    const timeline = await advanceTimelineTx(client, new Date());
+    if (timeline.phase !== "B" && timeline.phase !== "C") {
+      await discardOperation(client, operationKey);
+      return committedFailure("Trades only in Phase B or C", 409);
+    }
     const gameRow = await queryOne(client, "SELECT * FROM game_state WHERE id = 1 FOR SHARE");
     if (!gameRow || !["B", "C"].includes(String(gameRow.phase))) {
       throw new MutationError("Trades only in Phase B or C", 409);
@@ -514,6 +543,7 @@ export async function executeTradePg(input: {
     await completeOperation(client, operationKey, response);
     return response;
   });
+  return throwIfCommittedFailure(result);
 }
 
 async function armOutagesTx(client: TransactionClient, now: Date): Promise<number> {
@@ -546,10 +576,48 @@ export async function armOutagesPg(now = new Date()): Promise<number> {
   return withTransaction((client) => armOutagesTx(client, now));
 }
 
+async function advanceTimelineTx(client: TransactionClient, now: Date): Promise<{ phase: Phase; changed: boolean }> {
+  const row = await queryOne(client, "SELECT * FROM game_state WHERE id = 1 FOR UPDATE");
+  if (!row) throw new MutationError("Game state is unavailable", 503);
+  const current = game(row);
+  if (!current.clock_started_at || current.clock_paused_at || current.phase === "LOBBY" || current.phase === "FROZEN" || current.phase === "DEBRIEF") {
+    return { phase: current.phase, changed: false };
+  }
+  const target = phaseFromElapsed(current.phase, elapsedMs(current, now.getTime()));
+  const transitions = crossedTimedPhases(current.phase, target);
+  if (transitions.length === 0) return { phase: current.phase, changed: false };
+
+  const generation = new Date(current.clock_started_at).getTime();
+  for (const phase of transitions) {
+    const event = await insertEvent(client, {
+      tableNo: 0,
+      actor: "SYSTEM",
+      kind: "PHASE_CHANGE",
+      delta: 0,
+      key: `timeline:${generation}:${phase}`,
+      meta: { phase, via: "timeline" },
+    });
+    if (!event) throw new MutationError("Timeline audit event collision", 409);
+    await client.query(
+      `UPDATE game_state SET phase = $1,
+       clock_paused_at = CASE WHEN $1 = 'FROZEN' THEN $2::timestamptz ELSE clock_paused_at END
+       WHERE id = 1`,
+      [phase, now.toISOString()],
+    );
+    if (phase === "C") await armOutagesTx(client, now);
+  }
+  return { phase: transitions.at(-1)!, changed: true };
+}
+
+export async function advanceTimelinePg(now = new Date()): Promise<{ phase: Phase; changed: boolean }> {
+  return withTransaction((client) => advanceTimelineTx(client, now));
+}
+
 export async function tickOutagesPg(now = new Date()): Promise<number> {
   return withTransaction(async (client) => {
-    const gameRow = await queryOne(client, "SELECT phase FROM game_state WHERE id = 1 FOR SHARE");
-    if (gameRow?.phase !== "C") return 0;
+    await advanceTimelineTx(client, now);
+    const gameRow = await queryOne(client, "SELECT phase, clock_paused_at FROM game_state WHERE id = 1 FOR UPDATE");
+    if (gameRow?.phase !== "C" || gameRow.clock_paused_at) return 0;
     const rows = (await client.query("SELECT * FROM teams ORDER BY table_no FOR UPDATE")).rows;
     let insertedCount = 0;
     for (const row of rows) {
@@ -586,7 +654,7 @@ export async function solveOutagePg(
   answerCorrect: boolean,
   idempotencyKey: string,
 ) {
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const operationKey = `outage:solve:${session.deviceId}:${idempotencyKey}`;
     const replay = await beginOperation(client, {
       key: operationKey,
@@ -594,7 +662,14 @@ export async function solveOutagePg(
       request: { answer },
     });
     if (replay) return { ...replay, replay: true };
+    const timeline = await advanceTimelineTx(client, new Date());
+    if (timeline.phase !== "C") {
+      await discardOperation(client, operationKey);
+      return committedFailure("Outage solving is unavailable outside Phase C", 409);
+    }
 
+    const gameRow = await queryOne(client, "SELECT phase FROM game_state WHERE id = 1 FOR SHARE");
+    if (gameRow?.phase !== "C") throw new MutationError("Outage solving is unavailable outside Phase C", 409);
     const durable = await queryOne(client, "SELECT * FROM devices WHERE device_id = $1 FOR UPDATE", [session.deviceId]);
     if (!durable || Number(durable.table_no) !== session.tableNo || durable.role !== session.role) {
       throw new MutationError("Session no longer owns this role", 401);
@@ -633,6 +708,7 @@ export async function solveOutagePg(
     await completeOperation(client, operationKey, response);
     return response;
   });
+  return throwIfCommittedFailure(result);
 }
 
 export async function streamSnapshotPg() {
@@ -739,7 +815,7 @@ export type FacilitatorCommand = {
 };
 
 export async function executeFacilitatorPg(command: FacilitatorCommand) {
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const tableNo = command.tableNo ?? 0;
     const operationKey = `console:${command.idempotencyKey}`;
     const replay = await beginOperation(client, {
@@ -748,6 +824,11 @@ export async function executeFacilitatorPg(command: FacilitatorCommand) {
       request: command,
     });
     if (replay) return { ...replay, replay: true };
+    const timeline = await advanceTimelineTx(client, new Date());
+    if (command.action === "adjust" && (timeline.phase === "FROZEN" || timeline.phase === "DEBRIEF")) {
+      await discardOperation(client, operationKey);
+      return committedFailure("Leaderboard is locked after final freeze", 409);
+    }
     const audit = async (meta: Record<string, unknown> = {}) => {
       const event = await insertEvent(client, {
         tableNo, actor: "FACILITATOR", kind: command.action === "adjust" ? "FACILITATOR_ADJUST" : "FACILITATOR_ACTION",
@@ -760,29 +841,56 @@ export async function executeFacilitatorPg(command: FacilitatorCommand) {
     };
 
     switch (command.action) {
-      case "set_phase":
+      case "set_phase": {
+        const phase = command.phase!;
+        const currentGame = await queryOne(client, "SELECT phase FROM game_state WHERE id = 1 FOR UPDATE");
+        if (!currentGame || !isForwardPhaseTransition(currentGame.phase as Phase, phase)) {
+          throw new MutationError("Phase controls only move forward; use pause or kill for recovery", 409);
+        }
+        const timed = ["TUTORIAL", "A", "B", "C"].includes(phase);
         const changed = await queryOne(client, `UPDATE game_state SET phase = $1,
-          clock_started_at = CASE WHEN $1 IN ('TUTORIAL','A') AND clock_started_at IS NULL THEN now() ELSE clock_started_at END,
-          clock_paused_at = CASE WHEN $1 = 'FROZEN' THEN now() ELSE clock_paused_at END WHERE id = 1
-          RETURNING transaction_timestamp() AS changed_at`, [command.phase]);
-        await audit({ phase: command.phase });
-        if (command.phase === "C") await armOutagesTx(client, new Date(String(changed?.changed_at)));
+          clock_started_at = CASE
+            WHEN $1 = 'LOBBY' THEN NULL
+            WHEN $2::boolean THEN transaction_timestamp() - ($3::double precision * interval '1 millisecond')
+            ELSE clock_started_at END,
+          clock_paused_at = CASE WHEN $1 = 'FROZEN' THEN transaction_timestamp() WHEN $2::boolean OR $1 = 'LOBBY' THEN NULL ELSE clock_paused_at END,
+          paused_ms_total = CASE WHEN $2::boolean OR $1 = 'LOBBY' THEN 0 ELSE paused_ms_total END
+          WHERE id = 1 RETURNING transaction_timestamp() AS changed_at`,
+          [phase, timed, phaseStartElapsedMs(phase)]);
+        await audit({ phase });
+        const phaseEvent = await insertEvent(client, {
+          tableNo: 0, actor: "FACILITATOR", kind: "PHASE_CHANGE", delta: 0,
+          key: `${operationKey}:phase`, meta: { phase, via: "facilitator", reason: command.reason },
+        });
+        if (!phaseEvent) throw new MutationError("Phase-change audit event collision", 409);
+        if (phase === "C") await armOutagesTx(client, new Date(String(changed?.changed_at)));
         break;
+      }
       case "pause":
         await client.query("UPDATE game_state SET clock_paused_at = COALESCE(clock_paused_at, now()) WHERE id = 1");
         await audit();
         break;
-      case "resume":
-        await client.query(`UPDATE game_state SET paused_ms_total = paused_ms_total +
-          CASE WHEN clock_paused_at IS NULL THEN 0 ELSE (EXTRACT(EPOCH FROM (now() - clock_paused_at)) * 1000)::int END,
-          clock_paused_at = NULL WHERE id = 1`);
+      case "resume": {
+        const paused = await queryOne(client, "SELECT clock_paused_at, transaction_timestamp() AS resumed_at FROM game_state WHERE id = 1 FOR UPDATE");
+        if (paused?.clock_paused_at != null) {
+          const durationMs = new Date(String(paused.resumed_at)).getTime() - new Date(String(paused.clock_paused_at)).getTime();
+          await client.query(`UPDATE teams SET
+            outage_scheduled_at = CASE WHEN outage_scheduled_at IS NULL THEN NULL ELSE outage_scheduled_at + ($1::double precision * interval '1 millisecond') END,
+            outage_started_at = CASE WHEN outage_started_at IS NULL THEN NULL ELSE outage_started_at + ($1::double precision * interval '1 millisecond') END`, [durationMs]);
+          await client.query("UPDATE game_state SET paused_ms_total = paused_ms_total + $1, clock_paused_at = NULL WHERE id = 1", [durationMs]);
+        }
         await audit();
         break;
+      }
       case "broadcast":
         await client.query("UPDATE game_state SET narrative_banner = $1 WHERE id = 1", [command.banner ?? null]);
         await audit({ banner: command.banner ?? null });
         break;
       case "adjust": {
+        const currentGame = await queryOne(client, "SELECT phase FROM game_state WHERE id = 1 FOR UPDATE");
+        if (currentGame?.phase === "FROZEN" || currentGame?.phase === "DEBRIEF") {
+          throw new MutationError("Leaderboard is locked after final freeze", 409);
+        }
         const locked = await queryOne(client, "SELECT 1 FROM teams WHERE table_no = $1 FOR UPDATE", [tableNo]);
         if (!locked) throw new MutationError("Unknown table", 404);
         await audit();
@@ -828,4 +936,5 @@ export async function executeFacilitatorPg(command: FacilitatorCommand) {
     await completeOperation(client, operationKey, response);
     return response;
   });
+  return throwIfCommittedFailure(result);
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CONSOLE_COOKIE, consoleSessionCookieValue } from "./session";
-import { getCardById, listPositionsForTable, loadSeedIntoMemory, setGameState } from "./store";
+import { getCardById, getGameState, listEvents, listPositionsForTable, loadSeedIntoMemory, setGameState } from "./store";
 import { POST } from "../app/api/trade/route";
 
 beforeEach(() => {
@@ -31,6 +31,20 @@ function validTrade() {
 }
 
 describe("memory trade idempotency", () => {
+  it("commits the exact-boundary freeze while rejecting a trade", async () => {
+    const body = { ...validTrade(), doubled: false, reason: "Boundary trade", idempotencyKey: "trade:boundary" };
+    setGameState({
+      phase: "C",
+      clock_started_at: new Date(Date.now() - 64 * 60_000).toISOString(),
+      clock_paused_at: null,
+      paused_ms_total: 0,
+    });
+
+    expect((await POST(request(body))).status).toBe(409);
+    expect(getGameState().phase).toBe("FROZEN");
+    expect(listEvents().filter((event) => event.kind === "PHASE_CHANGE").at(-1)?.meta?.phase).toBe("FROZEN");
+  });
+
   it("replays the original response for a matching request", async () => {
     const body = { ...validTrade(), doubled: false, reason: "Validated by facilitator", idempotencyKey: "trade:replay" };
     const first = await POST(request(body));

@@ -5,6 +5,7 @@ import {
   scoreScan,
 } from "./scoring";
 import { inFinalFiveMinutes } from "./engines/clock";
+import { advanceMemoryTimelineUnlocked } from "./timeline";
 import { publishTable } from "./sse";
 import {
   appendEvent,
@@ -58,6 +59,7 @@ export async function executeScan(body: ScanBody): Promise<ScanResponse> {
       return { ok: false, status: 409, error: "Idempotency key was already used for a different request" };
     }
     if (operation.kind === "replay") return { ...operation.response, replay: true };
+    await advanceMemoryTimelineUnlocked(new Date());
     const response = await executeScanUnlocked(body, eventKey);
     if (response.ok) completeMemoryOperation(body.idempotencyKey, response);
     else cancelMemoryOperation(body.idempotencyKey);

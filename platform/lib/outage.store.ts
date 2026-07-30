@@ -2,12 +2,12 @@ import { outageOffsetSeconds } from "./engines/outage";
 import {
   appendEvent,
   beginMemoryOperation,
+  cancelMemoryOperation,
   completeMemoryOperation,
   derivedCapital,
   findEventByIdempotency,
   getGameState,
   getTeam,
-  listEvents,
   listTeams,
   updateTeam,
   withMemoryTransaction,
@@ -20,6 +20,10 @@ export class MemoryOutageError extends Error {
     super(message);
   }
 }
+
+type MemorySolveResult =
+  | { ok: false; wrong: true; tries: number; extraHint: boolean; replay?: boolean }
+  | { ok: true; green_unlocked: true; badge: string | null; modal: ReturnType<typeof scoreOutageResolved>["modal"]; replay?: boolean };
 
 export async function armMemoryOutages(now = new Date()): Promise<number> {
   return withMemoryTransaction(() => armMemoryOutagesUnlocked(now));
@@ -58,8 +62,8 @@ export async function solveMemoryOutage(
   answer: string,
   answerCorrect: boolean,
   idempotencyKey: string,
-) {
-  return withMemoryTransaction(async () => {
+): Promise<MemorySolveResult> {
+  const result = await withMemoryTransaction(async () => {
     const { getDevice } = await import("./store");
     const durable = getDevice(session.deviceId);
     if (!durable || durable.table_no !== session.tableNo || durable.role !== session.role) {
@@ -68,10 +72,7 @@ export async function solveMemoryOutage(
     if (session.role !== "CIO" && session.role !== "ALL_ROLES") {
       throw new MemoryOutageError("Only CIO can submit the outage sequence", 403);
     }
-    type SolveResult =
-      | { ok: false; wrong: true; tries: number; extraHint: boolean; replay?: boolean }
-      | { ok: true; green_unlocked: true; badge: string | null; modal: ReturnType<typeof scoreOutageResolved>["modal"]; replay?: boolean };
-    const operation = beginMemoryOperation<SolveResult>(
+    const operation = beginMemoryOperation<MemorySolveResult>(
       idempotencyKey,
       `outage:solve:${session.deviceId}:${session.tableNo}`,
       { answer },
@@ -80,6 +81,12 @@ export async function solveMemoryOutage(
       throw new MemoryOutageError("Idempotency key was already used for a different request", 409);
     }
     if (operation.kind === "replay") return { ...operation.response, replay: true };
+    const { advanceMemoryTimelineUnlocked } = await import("./timeline");
+    await advanceMemoryTimelineUnlocked(new Date());
+    if (getGameState().phase !== "C") {
+      cancelMemoryOperation(idempotencyKey);
+      return { committedFailure: true as const, error: "Outage solving is unavailable outside Phase C", status: 409 };
+    }
 
     const current = getTeam(session.tableNo);
     if (!current?.outage_active) throw new MemoryOutageError("No active outage", 409);
@@ -114,16 +121,37 @@ export async function solveMemoryOutage(
     completeMemoryOperation(idempotencyKey, response);
     return response;
   });
+  const failure = result as { committedFailure?: boolean; error?: string; status?: number };
+  if (failure.committedFailure) {
+    throw new MemoryOutageError(failure.error ?? "Outage mutation rejected", failure.status ?? 409);
+  }
+  return result as MemorySolveResult;
+}
+
+export function shiftMemoryOutageTimes(durationMs: number): void {
+  if (durationMs <= 0) return;
+  for (const current of listTeams()) {
+    updateTeam(current.table_no, {
+      outage_scheduled_at: current.outage_scheduled_at
+        ? new Date(new Date(current.outage_scheduled_at).getTime() + durationMs).toISOString()
+        : null,
+      outage_started_at: current.outage_started_at
+        ? new Date(new Date(current.outage_started_at).getTime() + durationMs).toISOString()
+        : null,
+    });
+  }
 }
 
 /** Server-invoked durable tick. It has no dependency on SSE connections. */
 export async function tickMemoryOutages(now = new Date()): Promise<number> {
   return withMemoryTransaction(async () => {
-    if (getGameState().phase !== "C") return 0;
+    const { advanceMemoryTimelineUnlocked } = await import("./timeline");
+    await advanceMemoryTimelineUnlocked(now);
+    const game = getGameState();
+    if (game.phase !== "C" || game.clock_paused_at) return 0;
     let ticks = 0;
     for (const current of listTeams()) {
-      const arm = listEvents(current.table_no).find((event) => event.kind === "OUTAGE_ARMED");
-      const scheduledAt = arm?.meta?.scheduledAt ? new Date(String(arm.meta.scheduledAt)) : null;
+      const scheduledAt = current.outage_scheduled_at ? new Date(current.outage_scheduled_at) : null;
       if (!scheduledAt || scheduledAt > now || current.green_unlocked) continue;
       if (!current.outage_active) updateTeam(current.table_no, {
         outage_active: true, outage_started_at: scheduledAt.toISOString(),

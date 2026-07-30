@@ -3,6 +3,7 @@ import { consoleTokenFromRequest, requireConsoleToken, AuthError } from "@/lib/a
 import {
   appendEvent,
   beginMemoryOperation,
+  cancelMemoryOperation,
   completeMemoryOperation,
   getCardById,
   getGameState,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/store";
 import { scoreTradeValidated } from "@/lib/scoring";
 import { inFinalFiveMinutes } from "@/lib/engines/clock";
+import { advanceMemoryTimelineUnlocked } from "@/lib/timeline";
 import { selectStoreKind } from "@/lib/store.interface";
 import { executeTradePg, MutationError } from "@/lib/store.pg";
 import { publishTable } from "@/lib/sse";
@@ -59,8 +61,12 @@ export async function POST(req: Request) {
             throw new MutationError("Idempotency key was already used for a different request", 409);
           }
           if (operation.kind === "replay") return { ...operation.response, replay: true };
+          await advanceMemoryTimelineUnlocked(new Date());
           const gs = getGameState();
-          if (gs.phase !== "B" && gs.phase !== "C") throw new MutationError("Trades only in Phase B or C", 409);
+          if (gs.phase !== "B" && gs.phase !== "C") {
+            cancelMemoryOperation(key);
+            return { committedFailure: true as const, error: "Trades only in Phase B or C", status: 409 };
+          }
           const card = getCardById(cardId);
           const position = getPosition(cardId);
           if (!card) throw new MutationError("Card not found", 404);
@@ -92,6 +98,9 @@ export async function POST(req: Request) {
           completeMemoryOperation(key, response);
           return response;
         });
+    if ("committedFailure" in result) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
+    }
     await Promise.all([publishTable(fromTable), publishTable(toTable)]);
     return NextResponse.json(result);
   } catch (error) {

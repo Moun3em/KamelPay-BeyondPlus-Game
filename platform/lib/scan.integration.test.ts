@@ -5,6 +5,7 @@ import {
   claimDevice,
   derivedCapital,
   getCardById,
+  getGameState,
   getPosition,
   getTeam,
   listEvents,
@@ -25,6 +26,26 @@ beforeEach(() => {
 });
 
 describe("atomic memory adapter contract", () => {
+  it("reconciles the server clock and rejects a scan at the exact final boundary", async () => {
+    const target = ["RED-T01-V1", "RED-T01-V2", "RED-T01-V3"]
+      .map(getCardById)
+      .find((candidate) => candidate && getPosition(candidate.card_id)?.held_by_table === 1)!;
+    setGameState({
+      phase: "C",
+      clock_started_at: new Date(Date.now() - 64 * 60_000).toISOString(),
+      clock_paused_at: null,
+      paused_ms_total: 0,
+    });
+
+    const result = await executeMemoryScan(session, {
+      cardId: target.card_id, action: "FILE", idempotencyKey: "scan:at-freeze",
+    });
+
+    expect(result).toMatchObject({ ok: false, status: 409 });
+    expect(getGameState().phase).toBe("FROZEN");
+    expect(listEvents(1).filter((event) => event.card_id === target.card_id)).toHaveLength(0);
+  });
+
   it("rejects a globally reused scan key from another authenticated table", async () => {
     const firstCard = ["RED-T01-V1", "RED-T01-V2", "RED-T01-V3"]
       .map(getCardById)

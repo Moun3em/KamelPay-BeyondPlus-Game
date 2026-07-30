@@ -3,6 +3,7 @@ import { armMemoryOutages, solveMemoryOutage, tickMemoryOutages } from "./outage
 import {
   claimDevice,
   derivedCapital,
+  getGameState,
   getTeam,
   listEvents,
   loadSeedIntoMemory,
@@ -40,6 +41,17 @@ describe("durable outage memory contract", () => {
 
     expect(second).toEqual(first);
     expect(first).toHaveLength(10);
+  });
+
+  it("does not activate or charge outages while the authoritative clock is paused", async () => {
+    const armedAt = new Date("2026-07-29T09:40:00.000Z");
+    await armMemoryOutages(armedAt);
+    const due = new Date(new Date(getTeam(1)!.outage_scheduled_at!).getTime() + 20_000);
+    setGameState({ clock_paused_at: new Date(armedAt.getTime() + 1_000).toISOString() });
+
+    expect(await tickMemoryOutages(due)).toBe(0);
+    expect(listEvents(1).filter((event) => event.kind === "OUTAGE_TICK")).toHaveLength(0);
+    expect(getTeam(1)?.outage_active).toBe(false);
   });
 
   it("ticks independently of SSE and concurrent invocations are idempotent", async () => {
@@ -94,6 +106,35 @@ describe("durable outage memory contract", () => {
     const replay = await solveMemoryOutage(input, "1-2-3-4-5", true, "solve:success");
     expect(replay).toEqual({ ...first, replay: true });
     await expect(solveMemoryOutage(input, "5-4-3-2-1", false, "solve:success")).rejects.toThrow(/different request/);
+  });
+
+  it("commits the exact-boundary freeze while rejecting an outage solve", async () => {
+    claimDevice("9b122d59-b698-4ecf-862d-856f9b93ad97", 1, "CIO");
+    updateTeam(1, { outage_active: true });
+    setGameState({
+      phase: "C",
+      clock_started_at: new Date(Date.now() - 64 * 60_000).toISOString(),
+      clock_paused_at: null,
+      paused_ms_total: 0,
+    });
+    const input = { deviceId: "9b122d59-b698-4ecf-862d-856f9b93ad97", tableNo: 1, role: "CIO" as const };
+
+    await expect(solveMemoryOutage(input, "1-2-3-4-5", true, "solve:boundary"))
+      .rejects.toMatchObject({ status: 409 });
+    expect(getGameState().phase).toBe("FROZEN");
+    expect(listEvents().filter((event) => event.kind === "PHASE_CHANGE").at(-1)?.meta?.phase).toBe("FROZEN");
+    expect(getTeam(1)?.outage_active).toBe(true);
+  });
+
+  it("rejects solving after the game is frozen", async () => {
+    claimDevice("9b122d59-b698-4ecf-862d-856f9b93ad97", 1, "CIO");
+    updateTeam(1, { outage_active: true });
+    setGameState({ phase: "FROZEN" });
+    const input = { deviceId: "9b122d59-b698-4ecf-862d-856f9b93ad97", tableNo: 1, role: "CIO" as const };
+
+    await expect(solveMemoryOutage(input, "1-2-3-4-5", true, "solve:frozen"))
+      .rejects.toMatchObject({ status: 409 });
+    expect(getTeam(1)?.outage_active).toBe(true);
   });
 
   it("does not increment wrong tries twice and scopes solve keys to the session/table", async () => {

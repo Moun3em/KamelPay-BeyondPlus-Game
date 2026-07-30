@@ -2,6 +2,7 @@ import { tickMemoryOutages } from "./outage.store";
 import { publishGlobal } from "./sse";
 import { tickOutagesPg } from "./store.pg";
 import { selectStoreKind } from "./store.interface";
+import type { TimelineResult } from "./timeline";
 
 /** Tick-only catch-up. Arming belongs exclusively to the atomic Phase C transition. */
 export async function catchUpOutages(now = new Date()): Promise<{ ticks: number }> {
@@ -15,6 +16,7 @@ export async function tickOutagesOnce(now = new Date()): Promise<number> {
 }
 
 type CronDependencies = {
+  advance: () => Promise<Pick<TimelineResult, "changed">>;
   tick: () => Promise<number>;
   sleep: (ms: number, signal: AbortSignal) => Promise<void>;
   publish: () => Promise<unknown>;
@@ -38,10 +40,11 @@ export async function runOutageCron(deps: CronDependencies): Promise<{ ticks: nu
   let ticks = 0;
   let attempts = 0;
   for (let slot = 0; slot < 6 && !deps.signal.aborted; slot++) {
+    const timeline = await deps.advance();
     const inserted = await deps.tick();
     attempts++;
     ticks += inserted;
-    if (inserted > 0) await deps.publish();
+    if (timeline.changed || inserted > 0) await deps.publish();
     if (slot < 5) await deps.sleep(10_000, deps.signal);
   }
   return { ticks, attempts };
