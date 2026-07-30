@@ -324,7 +324,7 @@ export async function executeScanPg(
     if (Number(position.held_by_table) !== session.tableNo) {
       throw new MutationError(`Table ${String(position.held_by_table).padStart(2, "0")} holds this card`, 409);
     }
-    if (["FILED", "QUARANTINED", "PLAYED"].includes(String(position.state))) {
+    if (["FILED", "QUARANTINED", "PLAYED", "TRADED"].includes(String(position.state))) {
       const prior = await queryOne(
         client,
         `SELECT id, table_no, kind, card_id, delta_aed, meta, idempotency_key
@@ -503,9 +503,13 @@ export async function executeTradePg(input: {
     });
     if (replay) return { ...replay, replay: true };
     const timeline = await advanceTimelineTx(client, new Date());
+    if (timeline.phase === "FROZEN" || timeline.phase === "DEBRIEF") {
+      await discardOperation(client, operationKey);
+      return committedFailure("Leaderboard is locked after final freeze", 409);
+    }
     if (timeline.phase !== "B" && timeline.phase !== "C") {
       await discardOperation(client, operationKey);
-      return committedFailure("Trades only in Phase B or C", 409);
+      return committedFailure(`Trades only in Phase B or C (current: ${timeline.phase})`, 409);
     }
     const gameRow = await queryOne(client, "SELECT * FROM game_state WHERE id = 1 FOR SHARE");
     if (!gameRow || !["B", "C"].includes(String(gameRow.phase))) {
@@ -519,12 +523,18 @@ export async function executeTradePg(input: {
     const position = await queryOne(client, "SELECT * FROM card_positions WHERE card_id = $1 FOR UPDATE", [input.cardId]);
     const cardRow = await queryOne(client, "SELECT * FROM cards WHERE card_id = $1", [input.cardId]);
     if (!cardRow) throw new MutationError("Card not found", 404);
-    if (!position || Number(position.held_by_table) !== input.fromTable) throw new MutationError("From-table does not hold this card", 409);
+    if (!position) throw new MutationError("Card position missing", 404);
+    if (Number(position.held_by_table) !== input.fromTable) throw new MutationError("From-table does not hold this card", 409);
+    const positionState = String(position.state);
+    if (positionState === "TRADED" || positionState === "FILED" || positionState === "QUARANTINED") {
+      await discardOperation(client, operationKey);
+      return committedFailure(`Card already ${positionState.toLowerCase()} — cannot be re-traded`, 409);
+    }
     const selected = card(cardRow);
     if (selected.owner_table !== input.toTable || selected.validity !== "VALID" || selected.deck !== "RED") {
       throw new MutationError("Invalid trade", 409);
     }
-    await client.query("UPDATE card_positions SET held_by_table = $1, state = 'PENDING' WHERE card_id = $2", [input.toTable, input.cardId]);
+    await client.query("UPDATE card_positions SET held_by_table = $1, state = 'TRADED' WHERE card_id = $2", [input.toTable, input.cardId]);
     for (const tableNo of [input.fromTable, input.toTable]) {
       const state = team(lockedTeams.rows.find((row) => Number(row.table_no) === tableNo)!);
       const scored = scoreTradeValidated(state, {

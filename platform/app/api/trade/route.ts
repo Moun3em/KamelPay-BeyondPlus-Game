@@ -63,21 +63,30 @@ export async function POST(req: Request) {
           if (operation.kind === "replay") return { ...operation.response, replay: true };
           await advanceMemoryTimelineUnlocked(new Date());
           const gs = getGameState();
+          if (gs.phase === "FROZEN" || gs.phase === "DEBRIEF") {
+            cancelMemoryOperation(key);
+            return { committedFailure: true as const, error: "Leaderboard is locked after final freeze", status: 409 };
+          }
           if (gs.phase !== "B" && gs.phase !== "C") {
             cancelMemoryOperation(key);
-            return { committedFailure: true as const, error: "Trades only in Phase B or C", status: 409 };
+            return { committedFailure: true as const, error: `Trades only in Phase B or C (current: ${gs.phase})`, status: 409 };
           }
           const card = getCardById(cardId);
           const position = getPosition(cardId);
           if (!card) throw new MutationError("Card not found", 404);
-          if (!position || position.held_by_table !== fromTable) throw new MutationError("From-table does not hold this card", 409);
+          if (!position) throw new MutationError("Card position missing", 404);
+          if (position.held_by_table !== fromTable) throw new MutationError("From-table does not hold this card", 409);
+          if (position.state === "TRADED" || position.state === "FILED" || position.state === "QUARANTINED") {
+            cancelMemoryOperation(key);
+            return { committedFailure: true as const, error: `Card already ${position.state.toLowerCase()} — cannot be re-traded`, status: 409 };
+          }
           if (card.owner_table !== toTable || card.validity !== "VALID" || card.deck !== "RED") {
             throw new MutationError("Invalid trade", 409);
           }
           const from = getTeam(fromTable);
           const to = getTeam(toTable);
           if (!from || !to) throw new MutationError("Unknown trade table", 404);
-          setPosition(cardId, { held_by_table: toTable, state: "PENDING" });
+          setPosition(cardId, { held_by_table: toTable, state: "TRADED" });
           for (const [tableNo, state] of [[fromTable, from], [toTable, to]] as const) {
             const scored = scoreTradeValidated(state, {
               cardId,

@@ -132,7 +132,12 @@ async function executeScanUnlocked(body: ScanBody, eventKey = body.idempotencyKe
     };
   }
 
-  if (pos.state === "FILED" || pos.state === "QUARANTINED" || pos.state === "PLAYED") {
+  if (
+    pos.state === "FILED" ||
+    pos.state === "QUARANTINED" ||
+    pos.state === "PLAYED" ||
+    pos.state === "TRADED"
+  ) {
     const prior = listEvents(device.table_no).find((e) => e.card_id === card.card_id);
     const modal = (prior?.meta?.modal as TeachingModal) ?? {
       title: "Already resolved",

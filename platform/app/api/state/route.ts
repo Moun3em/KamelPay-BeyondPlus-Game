@@ -3,6 +3,7 @@ import { authenticateDeviceToken, consoleTokenFromRequest, deviceTokenFromReques
 import { elapsedMs, formatClock, remainingInPhaseMs } from "@/lib/engines/clock";
 import { ECONOMY } from "@/lib/config";
 import { getTick } from "@/lib/sse";
+import { ensureEveryTableHasABadge } from "@/lib/badges";
 import {
   derivedCapital, foreignHeldForOthers, getDevice, getGameState, getTeam, listDevices,
   listEvents, listTeams, missingOwnValid, ownValidFiledCount,
@@ -25,6 +26,7 @@ export async function GET(req: Request) {
 
     if (scope === "projection" || scope === "leaderboard") {
       const source = pg ? pg.teams : listTeams().map((team) => ({ ...team, capital_aed: derivedCapital(team.table_no) }));
+      if (!pg) ensureEveryTableHasABadge();
       const teams = source.map((team) => ({
         table_no: team.table_no, capital_aed: team.capital_aed,
         display_aed: Math.max(ECONOMY.display_floor, team.capital_aed),
