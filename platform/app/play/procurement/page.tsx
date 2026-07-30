@@ -22,7 +22,7 @@ export default function TradePortalPage() {
       <h1 className="text-2xl font-bold">Trade Portal</h1>
 
       <section>
-        <div className="mb-2 grid grid-cols-2 gap-2 text-sm font-bold tracking-wide">
+        <div className="mb-2 grid grid-cols-2 gap-2 text-lg font-bold tracking-wide">
           <span>YOU NEED</span>
           <span>WALK TO</span>
         </div>
@@ -45,7 +45,7 @@ export default function TradePortalPage() {
       </section>
 
       <section>
-        <div className="mb-2 grid grid-cols-2 gap-2 text-sm font-bold tracking-wide">
+        <div className="mb-2 grid grid-cols-2 gap-2 text-lg font-bold tracking-wide">
           <span>YOU ARE HOLDING</span>
           <span>THEY NEED IT</span>
         </div>

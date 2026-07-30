@@ -4,7 +4,7 @@ export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-8 px-6 py-10">
       <div>
-        <p className="text-sm font-semibold tracking-wide text-[var(--c3)]">
+        <p className="text-lg font-semibold tracking-wide text-[var(--c3)]">
           Kamel Pay × Beyond Plus
         </p>
         <h1 className="mt-2 text-3xl font-bold leading-tight">

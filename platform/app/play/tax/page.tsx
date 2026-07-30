@@ -115,12 +115,12 @@ export default function TaxScannerPage() {
     <main className="mx-auto flex min-h-dvh max-w-lg flex-col">
       <header className="flex items-center justify-between px-4 py-3">
         <div>
-          <p className="text-sm font-semibold">Tax & Compliance</p>
+          <p className="text-lg font-semibold">Tax & Compliance</p>
           <p className="text-lg font-bold">
             T-{String(session?.tableNo ?? "—").padStart(2, "0")}
           </p>
         </div>
-        <p className="text-sm text-[var(--muted)]">
+        <p className="text-lg text-[var(--muted)]">
           {String(data?.phase ?? "")}
         </p>
       </header>
@@ -171,7 +171,7 @@ export default function TaxScannerPage() {
 
       <button
         type="button"
-        className="tap mx-4 mb-4 rounded-lg border-2 border-[var(--fg)] py-3 font-semibold"
+        className="tap mx-4 mb-4 min-h-12 rounded-lg border-2 border-[var(--fg)] py-3 font-semibold"
         onClick={() => setManualOpen((v) => !v)}
       >
         Can&apos;t scan? Enter card ID

@@ -83,7 +83,7 @@ export default function CioPage() {
           Encrypted system log — restore five-corner routing for a supplier-issued
           invoice.
         </p>
-        <pre className="overflow-auto rounded border-2 border-white/40 bg-black/30 p-3 text-sm leading-relaxed">
+        <pre className="overflow-auto rounded border-2 border-white/40 bg-black/30 p-3 text-lg leading-relaxed">
 {`C? → C? → C? → C? → C?
 supplier ASP · buyer ASP · FTA
 sequence required`}

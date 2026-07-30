@@ -74,7 +74,7 @@ export default function JoinPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-lg flex-col gap-6 px-4 py-8">
       <header>
-        <p className="text-sm font-semibold text-[var(--c3)]">Join</p>
+        <p className="text-lg font-semibold text-[var(--c3)]">Join</p>
         <h1 className="text-3xl font-bold">
           TABLE {String(tableNo).padStart(2, "0")}
         </h1>
@@ -145,7 +145,7 @@ export default function JoinPage() {
                   <span aria-hidden>{isTaken ? "○" : "●"}</span>
                   {ROLE_LABELS[role]}
                 </span>
-                <span className="text-sm">
+                <span className="text-lg">
                   {isTaken ? "taken by another device" : "claim"}
                 </span>
               </button>
