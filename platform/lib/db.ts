@@ -1,28 +1,31 @@
-import { createClient, db, type VercelPoolClient, sql } from "@vercel/postgres";
+import { createClient, sql, type VercelPoolClient } from "@vercel/postgres";
 
 export { sql };
 
 /**
- * Resolves the configured Postgres URL and returns the right helper:
+ * Postgres adapter.
  *
- *   - Pooled Neon endpoint (`-pooler.c-...neon.tech`) → use the global
- *     `sql` template tag backed by Vercel's pooled pool.
- *   - Direct (unpooled) Neon endpoint (`-c-...neon.tech`, no
- *     `-pooler` segment) → use `createClient()` for a long-lived
- *     connection that works with `withTransaction`.
+ * Vercel's Neon integration injects both pooled and unpooled URLs:
+ *   POSTGRES_URL             = pooled endpoint (-pooler.c-...neon.tech)
+ *   POSTGRES_URL_NON_POOLING = direct endpoint (-c-...neon.tech)
  *
- * The user only has to set `POSTGRES_URL` to whichever connection
- * string the Neon console hands out and the right client is picked.
+ * For this single-shot event platform we use the direct endpoint only,
+ * because:
+ *   1. The runtime lives ~60 minutes per event; long-lived client is fine
+ *   2. Postgres transactions (SELECT FOR UPDATE in store.pg.ts) need
+ *      the direct connection
+ *   3. The pooled endpoint speaks HTTP/WS via PgBouncer, which the
+ *      SQL transaction API doesn't speak cleanly
  *
- * Vercel Hobby + the Neon integration inject BOTH pooled
- * (`DATABASE_URL`) and unpooled (`DATABASE_URL_UNPOOLED`) values.
- * The platform reads `POSTGRES_URL` by convention.
+ * The user only has to set POSTGRES_URL_NON_POOLING (we set it from
+ * the unpooled DATABASE_URL_UNPOOLED the Neon console hands out).
+ * Falls back to POSTGRES_URL for backwards compatibility.
  */
 export function requirePostgresUrl(): string {
-  const url = process.env.POSTGRES_URL;
+  const url = process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL;
   if (!url) {
     throw new Error(
-      "POSTGRES_URL is required. Set it before running production stateful routes.",
+      "POSTGRES_URL_NON_POOLING (or POSTGRES_URL) is required. Set it before running production stateful routes.",
     );
   }
   return url;
@@ -61,68 +64,67 @@ export async function runTransaction<T, C extends TransactionClient>(
   }
 }
 
-/** Heuristic: is this URL the Neon pooled endpoint? */
-function isPooledUrl(url: string): boolean {
-  // Neon pooled hosts include `-pooler.` in the hostname.
-  return /-pooler\.[a-z0-9-]*\.aws\.neon\.tech/i.test(url);
-}
-
-let directClientSingleton: unknown = null;
-let directClientUrl: string | null = null;
+let clientSingleton: VercelPoolClient | null = null;
+let clientUrl: string | null = null;
 
 /**
- * Get a long-lived direct (unpooled) Postgres client. Created lazily
- * and memoised per URL.
+ * Get the long-lived direct (unpooled) Postgres client. Created lazily
+ * and memoised per URL. The direct endpoint is required because the
+ * SQL transaction API in store.pg.ts uses SELECT FOR UPDATE which
+ * cannot safely span PgBouncer's pooled connections.
  */
-export async function getDirectClient(): Promise<VercelPoolClient> {
+export function getClient(): VercelPoolClient {
   const url = requirePostgresUrl();
-  if (directClientSingleton && directClientUrl === url) {
-    return directClientSingleton as VercelPoolClient;
-  }
-  const client = createClient({ connectionString: url }) as unknown as VercelPoolClient;
-  directClientSingleton = client;
-  directClientUrl = url;
-  return client;
+  if (clientSingleton && clientUrl === url) return clientSingleton;
+  clientSingleton = createClient({ connectionString: url }) as unknown as VercelPoolClient;
+  clientUrl = url;
+  return clientSingleton;
 }
 
-/**
- * Pick the right transaction pool for the configured URL.
- *
- * - pooled URL → use the Vercel global pool (db)
- * - direct URL → use a memoised createClient() (long-lived)
- */
-export async function pickTransactionPool(): Promise<TransactionPool> {
-  const url = requirePostgresUrl();
-  if (isPooledUrl(url)) {
-    return db as unknown as TransactionPool;
-  }
-  const direct = await getDirectClient();
-  return direct as unknown as TransactionPool;
-}
-
-/**
- * Convenience: run a transaction with the right pool, awaited.
- * Replaces `withTransaction` so callers can use `await`.
- */
 export async function withTransaction<T>(
   fn: (client: TransactionClient) => Promise<T>,
 ): Promise<T> {
-  const pool = await pickTransactionPool();
-  return runTransaction(pool, fn);
+  return runTransaction(getClient() as unknown as TransactionPool, fn);
+}
+
+/**
+ * Run a parameterised query and return rows. Convenience wrapper for
+ * the common SELECT/UPDATE-with-bind pattern used across routes.
+ */
+export async function query<R = Record<string, unknown>>(
+  text: string,
+  values: unknown[] = [],
+): Promise<R[]> {
+  const client = getClient();
+  const result = await client.query({ text, values });
+  return result.rows as R[];
+}
+
+/**
+ * Same as `query` but returns the first row or null.
+ */
+export async function queryOne<R = Record<string, unknown>>(
+  text: string,
+  values: unknown[] = [],
+): Promise<R | null> {
+  const rows = await query<R>(text, values);
+  return rows[0] ?? null;
 }
 
 export async function derivedCapital(tableNo: number): Promise<number> {
-  const { rows } = await sql<{ sum: string | null }>`
-    SELECT COALESCE(SUM(delta_aed), 0)::text AS sum
-    FROM events
-    WHERE table_no = ${tableNo}
-  `;
+  const rows = await query<{ sum: string | null }>(
+    "SELECT COALESCE(SUM(delta_aed), 0)::text AS sum FROM events WHERE table_no = $1",
+    [tableNo],
+  );
   return 1_000_000 + Number(rows[0]?.sum ?? 0);
 }
 
 export async function reconcileCapital(tableNo: number): Promise<number> {
   const truth = await derivedCapital(tableNo);
-  await sql`UPDATE teams SET capital_aed = ${truth} WHERE table_no = ${tableNo}`;
+  await query(
+    "UPDATE teams SET capital_aed = $1 WHERE table_no = $2",
+    [truth, tableNo],
+  );
   return truth;
 }
 
@@ -131,8 +133,8 @@ export async function reconcileCapital(tableNo: number): Promise<number> {
  * stateful request, throttled to once per ~5 seconds per runtime
  * instance. The Hobby Vercel plan refuses `* * * * *` cron schedules
  * (daily-cron cap), so the platform drives its own tick from the
- * request hot path. Safe because the tick is idempotent and
- * concurrency-safe (uses SELECT ... FOR UPDATE under the hood).
+ * request hot path. Safe because every underlying mutation is
+ * idempotent and uses SELECT FOR UPDATE under the hood.
  */
 let lastTickAt = 0;
 let lastTickPromise: Promise<unknown> | null = null;
