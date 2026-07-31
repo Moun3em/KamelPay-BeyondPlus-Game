@@ -66,3 +66,44 @@ export async function reconcileCapital(tableNo: number): Promise<number> {
   await sql`UPDATE teams SET capital_aed = ${truth} WHERE table_no = ${tableNo}`;
   return truth;
 }
+
+/**
+ * Self-tick: run the same work as /api/cron/outage from inside any
+ * stateful request, throttled to once per ~5 seconds per runtime
+ * instance. The Hobby Vercel plan refuses `* * * * *` cron schedules
+ * (daily-cron cap), so the platform drives its own tick from the
+ * request hot path. Safe because the tick is idempotent and
+ * concurrency-safe (uses SELECT ... FOR UPDATE under the hood).
+ */
+let lastTickAt = 0;
+let lastTickPromise: Promise<unknown> | null = null;
+const TICK_THROTTLE_MS = 5_000;
+
+export async function selfTickOutageOnce(now: Date = new Date()): Promise<{
+  advanced: number;
+  ticks: number;
+  ran: boolean;
+}> {
+  const nowMs = now.getTime();
+  if (nowMs - lastTickAt < TICK_THROTTLE_MS) {
+    return { advanced: 0, ticks: 0, ran: false };
+  }
+  if (lastTickPromise) {
+    await lastTickPromise.catch(() => undefined);
+    return { advanced: 0, ticks: 0, ran: false };
+  }
+  lastTickAt = nowMs;
+  lastTickPromise = (async () => {
+    try {
+      const { advanceTimelineOnce } = await import("./timeline");
+      const { tickOutagesOnce } = await import("./outage.catchup");
+      const advanced = await advanceTimelineOnce(now);
+      const ticks = await tickOutagesOnce(now);
+      return { advanced, ticks };
+    } finally {
+      lastTickPromise = null;
+    }
+  })();
+  const result = await lastTickPromise.catch(() => ({ advanced: 0, ticks: 0 }));
+  return { ...(result as { advanced: number; ticks: number }), ran: true };
+}
