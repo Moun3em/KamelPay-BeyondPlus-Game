@@ -1,7 +1,23 @@
-import { db, sql } from "@vercel/postgres";
+import { createClient, db, type VercelPoolClient, sql } from "@vercel/postgres";
 
 export { sql };
 
+/**
+ * Resolves the configured Postgres URL and returns the right helper:
+ *
+ *   - Pooled Neon endpoint (`-pooler.c-...neon.tech`) → use the global
+ *     `sql` template tag backed by Vercel's pooled pool.
+ *   - Direct (unpooled) Neon endpoint (`-c-...neon.tech`, no
+ *     `-pooler` segment) → use `createClient()` for a long-lived
+ *     connection that works with `withTransaction`.
+ *
+ * The user only has to set `POSTGRES_URL` to whichever connection
+ * string the Neon console hands out and the right client is picked.
+ *
+ * Vercel Hobby + the Neon integration inject BOTH pooled
+ * (`DATABASE_URL`) and unpooled (`DATABASE_URL_UNPOOLED`) values.
+ * The platform reads `POSTGRES_URL` by convention.
+ */
 export function requirePostgresUrl(): string {
   const url = process.env.POSTGRES_URL;
   if (!url) {
@@ -45,11 +61,54 @@ export async function runTransaction<T, C extends TransactionClient>(
   }
 }
 
+/** Heuristic: is this URL the Neon pooled endpoint? */
+function isPooledUrl(url: string): boolean {
+  // Neon pooled hosts include `-pooler.` in the hostname.
+  return /-pooler\.[a-z0-9-]*\.aws\.neon\.tech/i.test(url);
+}
+
+let directClientSingleton: unknown = null;
+let directClientUrl: string | null = null;
+
+/**
+ * Get a long-lived direct (unpooled) Postgres client. Created lazily
+ * and memoised per URL.
+ */
+export async function getDirectClient(): Promise<VercelPoolClient> {
+  const url = requirePostgresUrl();
+  if (directClientSingleton && directClientUrl === url) {
+    return directClientSingleton as VercelPoolClient;
+  }
+  const client = createClient({ connectionString: url }) as unknown as VercelPoolClient;
+  directClientSingleton = client;
+  directClientUrl = url;
+  return client;
+}
+
+/**
+ * Pick the right transaction pool for the configured URL.
+ *
+ * - pooled URL → use the Vercel global pool (db)
+ * - direct URL → use a memoised createClient() (long-lived)
+ */
+export async function pickTransactionPool(): Promise<TransactionPool> {
+  const url = requirePostgresUrl();
+  if (isPooledUrl(url)) {
+    return db as unknown as TransactionPool;
+  }
+  const direct = await getDirectClient();
+  return direct as unknown as TransactionPool;
+}
+
+/**
+ * Convenience: run a transaction with the right pool, awaited.
+ * Replaces `withTransaction` so callers can use `await`.
+ */
 export async function withTransaction<T>(
   fn: (client: TransactionClient) => Promise<T>,
 ): Promise<T> {
-  requirePostgresUrl();
-  return runTransaction(db as unknown as TransactionPool, fn);
+  const pool = await pickTransactionPool();
+  return runTransaction(pool, fn);
 }
 
 export async function derivedCapital(tableNo: number): Promise<number> {

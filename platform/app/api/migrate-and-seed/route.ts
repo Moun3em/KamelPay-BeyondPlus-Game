@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AuthError, requireServerTick } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { loadSeedIntoMemory } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
