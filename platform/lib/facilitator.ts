@@ -5,7 +5,7 @@ export const MAX_FACILITATOR_ADJUST_AED = ECONOMY.starting_capital;
 const ACTIONS = [
   "set_phase", "pause", "resume", "broadcast", "adjust", "force_resolve_outage",
   "unlock_green", "award_badge", "ensure_badges", "release_role", "reset_device", "kill",
-  "set_active_tables", "reset_game", "set_event_mode",
+  "set_active_tables", "reset_game", "set_event_mode", "console_scan",
 ] as const;
 type Action = (typeof ACTIONS)[number];
 
@@ -20,6 +20,7 @@ export type FacilitatorCommand =
   | (Common & { action: "reset_device"; deviceId: string })
   | (Common & { action: "set_active_tables"; activeTables: number })
   | (Common & { action: "set_event_mode"; eventMode: boolean })
+  | (Common & { action: "console_scan"; tableNo: number; cardId: string; scanAction: "FILE" | "QUARANTINE" })
   | (Common & { action: "reset_game" })
   | (Common & { action: "pause" | "resume" | "ensure_badges" | "kill" });
 
@@ -51,6 +52,7 @@ export function validateFacilitatorCommand(input: unknown): FacilitatorCommand {
     force_resolve_outage: ["tableNo"], unlock_green: ["tableNo"], award_badge: ["tableNo", "badge"],
     ensure_badges: [], release_role: ["tableNo", "role"], reset_device: ["deviceId"], kill: [],
     set_active_tables: ["activeTables"], reset_game: [], set_event_mode: ["eventMode"],
+    console_scan: ["tableNo", "cardId", "scanAction"],
   };
   const allowed = new Set(["action", "reason", "idempotencyKey", ...actionFields[action]]);
   const unknown = Object.keys(raw).find((key) => !allowed.has(key));
@@ -94,6 +96,13 @@ export function validateFacilitatorCommand(input: unknown): FacilitatorCommand {
     case "set_event_mode": {
       if (typeof raw.eventMode !== "boolean") throw new Error("eventMode must be a boolean");
       return { ...common, action, eventMode: raw.eventMode };
+    }
+    case "console_scan": {
+      const t = tableNo(raw.tableNo);
+      const cardId = boundedText(raw.cardId, "cardId", 64);
+      if (!/^[A-Z0-9-]{1,64}$/i.test(cardId)) throw new Error("Invalid cardId");
+      if (raw.scanAction !== "FILE" && raw.scanAction !== "QUARANTINE") throw new Error("Invalid scanAction");
+      return { ...common, action, tableNo: t, cardId, scanAction: raw.scanAction };
     }
     case "reset_game":
       return { ...common, action };

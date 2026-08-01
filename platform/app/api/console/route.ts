@@ -8,11 +8,14 @@ import { validateFacilitatorCommand } from "@/lib/facilitator";
 import { armMemoryOutagesUnlocked, shiftMemoryOutageTimes } from "@/lib/outage.store";
 import { advanceMemoryTimelineUnlocked, isForwardPhaseTransition, manualPhaseClockPatch } from "@/lib/timeline";
 import { selectStoreKind } from "@/lib/store.interface";
-import { executeFacilitatorPg, MutationError } from "@/lib/store.pg";
+import { executeFacilitatorPg, executeScanPg, MutationError } from "@/lib/store.pg";
+import { executeMemoryScan } from "@/lib/scan";
+import { sql } from "@/lib/db";
 import {
   appendEvent,
   beginMemoryOperation,
   cancelMemoryOperation,
+  claimDevice,
   completeMemoryOperation,
   getTeam,
   listTeams,
@@ -60,6 +63,36 @@ export async function POST(req: Request) {
   try {
     requireConsoleToken(consoleTokenFromRequest(req));
     const command = validateFacilitatorCommand(body);
+
+    // 0-device rescue: scan on behalf of a table. Handled outside the
+    // facilitator transaction (scan executors own their own transaction/lock).
+    if (command.action === "console_scan") {
+      // Deterministic per-table console device (devices.device_id is UUID).
+      const consoleDeviceId = `00000000-0000-4000-8000-${String(command.tableNo).padStart(12, "0")}`;
+      if (selectStoreKind() === "postgres") {
+        await sql.query(
+          `INSERT INTO devices (device_id, table_no, role) VALUES ($1, $2, 'ALL_ROLES')
+           ON CONFLICT (device_id) DO UPDATE SET table_no = $2, role = 'ALL_ROLES'`,
+          [consoleDeviceId, command.tableNo],
+        );
+      } else {
+        claimDevice(consoleDeviceId, command.tableNo, "ALL_ROLES");
+      }
+      const session = { deviceId: consoleDeviceId, tableNo: command.tableNo, role: "ALL_ROLES" as Role };
+      const result = selectStoreKind() === "postgres"
+        ? await executeScanPg(session, {
+            cardId: command.cardId, action: command.scanAction, idempotencyKey: command.idempotencyKey,
+          })
+        : await executeMemoryScan(session, {
+            cardId: command.cardId, action: command.scanAction, idempotencyKey: command.idempotencyKey,
+          });
+      await publishTable(command.tableNo);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error, hint: (result as { hint?: string }).hint }, { status: 409 });
+      }
+      return NextResponse.json({ ...result });
+    }
+
     if (selectStoreKind() === "postgres") {
       const result = await executeFacilitatorPg(command);
       await publishGlobal();

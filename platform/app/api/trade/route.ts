@@ -104,7 +104,19 @@ export async function POST(req: Request) {
               meta: { modal: scored.modal, counterparty: tableNo === fromTable ? toTable : fromTable, reason },
             });
           }
-          const response = { ok: true as const, replay: false, card_id: cardId, now_held_by: toTable };
+          const response = {
+            ok: true as const, replay: false, card_id: cardId, now_held_by: toTable,
+            compliance: {
+              verdict: "COMPLIANT" as const,
+              reason: `VALID ${card.archetype} invoice returned to its owner T-${String(toTable).padStart(2, "0")} — both tables gain +AED 5,000.`,
+              checks: [
+                { label: "Card is a valid RED invoice", passed: true },
+                { label: `Returned to owner table T-${String(toTable).padStart(2, "0")}`, passed: true },
+                { label: "Trade window open (Phase B/C)", passed: true },
+                { label: "Both parties gain +AED 5,000", passed: true },
+              ],
+            },
+          };
           completeMemoryOperation(key, response);
           return response;
         });

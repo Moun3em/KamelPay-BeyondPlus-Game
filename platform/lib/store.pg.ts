@@ -643,7 +643,19 @@ export async function executeTradePg(input: {
       });
       if (!inserted) throw new MutationError("Trade event idempotency collision", 409);
     }
-    const response = { ok: true as const, replay: false, card_id: input.cardId, now_held_by: input.toTable };
+    const response = {
+      ok: true as const, replay: false, card_id: input.cardId, now_held_by: input.toTable,
+      compliance: {
+        verdict: "COMPLIANT" as const,
+        reason: `VALID ${selected.archetype} invoice returned to its owner T-${String(input.toTable).padStart(2, "0")} — both tables gain +AED 5,000.`,
+        checks: [
+          { label: "Card is a valid RED invoice", passed: true },
+          { label: `Returned to owner table T-${String(input.toTable).padStart(2, "0")}`, passed: true },
+          { label: "Trade window open (Phase B/C)", passed: true },
+          { label: "Both parties gain +AED 5,000", passed: true },
+        ],
+      },
+    };
     await completeOperation(client, operationKey, response);
     return response;
   });

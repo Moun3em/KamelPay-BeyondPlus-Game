@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatClock } from "@/lib/engines/clock";
 import { usePlayerState } from "@/components/ui";
 import { ACTIVE_TABLES, PHASES } from "@/lib/config";
+import { guidanceFor } from "@/lib/console-guide";
 
 export default function ConsolePage() {
   const router = useRouter();
@@ -94,6 +95,9 @@ function ConsoleAuthed() {
   const [tradeFrom, setTradeFrom] = useState("");
   const [tradeTo, setTradeTo] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [tradeResult, setTradeResult] = useState<{ compliance?: { verdict: string; reason: string; checks: { label: string; passed: boolean }[] } } | null>(null);
+  const [showManualPhase, setShowManualPhase] = useState(false);
+  const [rescueCard, setRescueCard] = useState("");
   const [activeTablesDraft, setActiveTablesDraft] = useState<number>(Number(data?.activeTables ?? ACTIVE_TABLES.default));
 
   useEffect(() => {
@@ -202,12 +206,36 @@ function ConsoleAuthed() {
           <button
             type="button"
             className="tap rounded-xl border-2 border-[var(--kp-line)] px-4 py-2 text-lg font-semibold text-[var(--kp-mute)] transition-colors hover:border-[var(--kp-ink)]"
+            onClick={() => router.push("/debrief")}
+          >
+            Debrief screen
+          </button>
+          <button
+            type="button"
+            className="tap rounded-xl border-2 border-[var(--kp-line)] px-4 py-2 text-lg font-semibold text-[var(--kp-mute)] transition-colors hover:border-[var(--kp-ink)]"
             onClick={() => router.push("/")}
           >
             Exit
           </button>
         </div>
       </header>
+
+      {(() => {
+        const guide = guidanceFor(phase as Parameters<typeof guidanceFor>[0], eventMode, paused);
+        return (
+          <section className="mb-6 rounded-2xl border-2 border-[var(--kp-blue)] bg-[var(--kp-blue)]/10 p-5">
+            <h2 className="text-xl font-bold text-[var(--kp-ink)]">🎯 {guide.title}</h2>
+            <ol className="mt-2 grid gap-1 text-lg text-[var(--kp-ink)]">
+              {guide.steps.map((s, i) => (
+                <li key={s} className="flex gap-2">
+                  <span className="font-bold tabular text-[var(--kp-blue)]">{i + 1}.</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        );
+      })()}
 
       <section className="mb-6 rounded-2xl border border-[var(--kp-line)] bg-white p-4">
         <label className="flex flex-col gap-2">
@@ -226,21 +254,51 @@ function ConsoleAuthed() {
         </label>
       </section>
 
-      <section className="mb-6 flex flex-wrap gap-2">
-        {PHASES.map((p) => (
-          <button
-            key={p}
-            type="button"
-            className={`tap rounded-xl border-2 px-5 py-3 text-lg font-bold transition-colors ${
-              phase === p
-                ? "border-[var(--kp-blue)] bg-[var(--kp-blue)] text-white"
-                : "border-[var(--kp-line)] bg-white text-[var(--kp-ink)] hover:border-[var(--kp-ink)]"
-            }`}
-            onClick={() => void act("set_phase", { phase: p })}
-          >
-            {p}
-          </button>
-        ))}
+      <section className="mb-6">
+        <h2 className="mb-1 text-lg font-bold">
+          Phase control
+          <span className="ml-2 text-base font-normal text-[var(--kp-mute)]">
+            {eventMode ? "AUTO — the platform advances phases on the clock. Use manual override only to skip ahead." : "The platform can run phases automatically — turn EVENT MODE on. Manual buttons jump to a phase."}
+          </span>
+        </h2>
+        {eventMode && !showManualPhase ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-[var(--kp-success)] bg-[var(--kp-success)]/10 p-4">
+            <span className="text-lg font-bold text-[var(--kp-success)]">⏱ AUTO — next phase on the clock</span>
+            <button
+              type="button"
+              className="tap rounded-xl border-2 border-[var(--kp-line)] px-4 py-2 text-lg font-semibold text-[var(--kp-ink)]"
+              onClick={() => setShowManualPhase(true)}
+            >
+              Manual override
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {PHASES.map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={`tap rounded-xl border-2 px-5 py-3 text-lg font-bold transition-colors ${
+                  phase === p
+                    ? "border-[var(--kp-blue)] bg-[var(--kp-blue)] text-white"
+                    : "border-[var(--kp-line)] bg-white text-[var(--kp-ink)] hover:border-[var(--kp-ink)]"
+                }`}
+                onClick={() => void act("set_phase", { phase: p })}
+              >
+                {p}
+              </button>
+            ))}
+            {eventMode ? (
+              <button
+                type="button"
+                className="tap rounded-xl border-2 border-[var(--kp-line)] px-4 py-2 text-lg font-semibold text-[var(--kp-mute)]"
+                onClick={() => setShowManualPhase(false)}
+              >
+                Back to AUTO
+              </button>
+            ) : null}
+          </div>
+        )}
       </section>
 
       <section className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border-2 border-[var(--kp-line)] bg-white p-3">
@@ -399,6 +457,40 @@ function ConsoleAuthed() {
         >
           Award CLEAN_CLOSE
         </button>
+        <label className="flex flex-col gap-2 md:col-span-2">
+          <span className="text-lg font-bold">
+            Scan a card for this table (no phone needed)
+            <span className="ml-2 text-base font-normal text-[var(--kp-mute)]">
+              Rescue a table with zero devices: type the card ID and press FILE or QUARANTINE.
+            </span>
+          </span>
+          <input
+            className="tap rounded-xl border-2 border-[var(--kp-line)] bg-white px-4 py-3 text-lg tabular focus:border-[var(--kp-blue)] focus:outline-none"
+            value={rescueCard}
+            onChange={(e) => setRescueCard(e.target.value)}
+            placeholder="e.g. RED-T01-V1"
+          />
+        </label>
+        <button
+          type="button"
+          className="tap rounded-xl bg-[var(--kp-indigo)] px-4 py-3 text-lg font-bold text-white transition-colors hover:opacity-90"
+          onClick={() => {
+            void act("console_scan", { tableNo: selected, cardId: rescueCard, scanAction: "FILE" });
+            setRescueCard("");
+          }}
+        >
+          FILE for this table
+        </button>
+        <button
+          type="button"
+          className="tap rounded-xl border-2 border-[var(--kp-indigo)] px-4 py-3 text-lg font-bold text-[var(--kp-indigo)] transition-colors hover:bg-[var(--kp-indigo)]/10"
+          onClick={() => {
+            void act("console_scan", { tableNo: selected, cardId: rescueCard, scanAction: "QUARANTINE" });
+            setRescueCard("");
+          }}
+        >
+          QUARANTINE for this table
+        </button>
         <button
           type="button"
           className="tap rounded-xl border-2 border-[var(--kp-line)] bg-[var(--kp-canvas-soft)] px-4 py-3 text-lg font-bold text-[var(--kp-ink)] transition-colors hover:border-[var(--kp-ink)] md:col-span-2"
@@ -409,22 +501,28 @@ function ConsoleAuthed() {
       </section>
 
       <section className="mb-6 grid gap-3 rounded-2xl border border-[var(--kp-line)] bg-white p-5 md:grid-cols-4">
-        <h2 className="md:col-span-4 text-xl font-bold">ASP trade validation</h2>
+        <div className="md:col-span-4">
+          <h2 className="text-xl font-bold">ASP trade validation</h2>
+          <p className="mt-1 text-base text-[var(--kp-slate)]">
+            1. Take the card the buyer hands you · 2. Type its ID (under the QR) · 3. From = the table handing it in ·
+            To = the company named on the invoice (its owner) · 4. Validate. Both tables gain +AED 5,000.
+          </p>
+        </div>
         <input
           className="tap rounded-xl border-2 border-[var(--kp-line)] bg-white px-4 py-3 text-lg focus:border-[var(--kp-blue)] focus:outline-none"
-          placeholder="Card ID"
+          placeholder="1. Card ID"
           value={tradeCard}
           onChange={(e) => setTradeCard(e.target.value)}
         />
         <input
           className="tap rounded-xl border-2 border-[var(--kp-line)] bg-white px-4 py-3 text-lg tabular focus:border-[var(--kp-blue)] focus:outline-none"
-          placeholder="From table"
+          placeholder="2. From table"
           value={tradeFrom}
           onChange={(e) => setTradeFrom(e.target.value)}
         />
         <input
           className="tap rounded-xl border-2 border-[var(--kp-line)] bg-white px-4 py-3 text-lg tabular focus:border-[var(--kp-blue)] focus:outline-none"
-          placeholder="To table (owner)"
+          placeholder="3. To table (owner)"
           value={tradeTo}
           onChange={(e) => setTradeTo(e.target.value)}
         />
@@ -444,17 +542,33 @@ function ConsoleAuthed() {
                 idempotencyKey: crypto.randomUUID(),
               }),
             });
+            const j = await res.json().catch(() => ({}));
             if (!res.ok) {
-              const j = await res.json();
               setError(j.error ?? "Trade failed");
+              setTradeResult(null);
             } else {
               setError(null);
+              setTradeResult(j as { compliance?: { verdict: string; reason: string; checks: { label: string; passed: boolean }[] } });
               await refresh();
             }
           }}
         >
           Validate trade
         </button>
+        {tradeResult?.compliance ? (
+          <div className="md:col-span-4 rounded-xl border-2 border-[var(--kp-success)] bg-[var(--kp-success)]/10 p-4">
+            <p className="text-lg font-bold text-[var(--kp-success)]">✅ {tradeResult.compliance.verdict}</p>
+            <p className="text-base text-[var(--kp-ink)]">{tradeResult.compliance.reason}</p>
+            <ul className="mt-2 grid gap-1 text-base">
+              {tradeResult.compliance.checks.map((c) => (
+                <li key={c.label} className="flex items-center gap-2">
+                  <span aria-hidden>{c.passed ? "✓" : "✗"}</span>
+                  <span>{c.label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
 
       {error ? (
