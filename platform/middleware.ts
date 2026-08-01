@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export const config = {
   matcher: ["/api/:path*"],
+  runtime: "nodejs", // Node.js middleware (next.config: experimental.nodeMiddleware)
 };
 
 export async function middleware(_req: NextRequest) {
@@ -33,5 +34,3 @@ export async function middleware(_req: NextRequest) {
   }
   return NextResponse.next();
 }
-
-export const runtime = "nodejs";
