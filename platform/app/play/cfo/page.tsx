@@ -13,6 +13,13 @@ export default function CfoPage() {
     if (error === "session") router.replace("/join");
   }, [error, router]);
 
+  useEffect(() => {
+    const phase = data?.phase as string | undefined;
+    if (phase === "TUTORIAL") {
+      router.replace("/play/onboarding");
+    }
+  }, [data?.phase, router]);
+
   const session = data?.session as { tableNo: number } | undefined;
   const ledger = data?.ledger as {
     filed: number;

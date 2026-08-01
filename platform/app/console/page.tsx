@@ -32,28 +32,35 @@ export default function ConsolePage() {
   const [tradeCard, setTradeCard] = useState("");
   const [tradeFrom, setTradeFrom] = useState("1");
   const [tradeTo, setTradeTo] = useState("2");
-
-  const refresh = useCallback(async () => {
-    const res = await fetch("/api/state?scope=console");
-    if (res.status === 401) {
-      setAuthed(false);
-      return;
-    }
-    if (!res.ok) return;
-    const data = await res.json();
-    setTeams(data.teams);
-    setPhase(data.phase);
-    setPaused(data.paused);
-    setRemaining(data.remaining_ms ?? 0);
-    setBanner(data.banner ?? "");
-  }, []);
+  const [setup, setSetup] = useState(true);
+  const [tableCount, setTableCount] = useState(6);
 
   useEffect(() => {
     if (!authed) return;
+
+    const refresh = async () => {
+      try {
+        const res = await fetch("/api/state?scope=console");
+        if (res.status === 401) {
+          setAuthed(false);
+          return;
+        }
+        if (!res.ok) return;
+        const data = await res.json();
+        setTeams(data.teams ?? []);
+        setPhase(data.phase ?? "LOBBY");
+        setPaused(data.paused ?? false);
+        setRemaining(data.remaining_ms ?? 0);
+        setBanner(data.banner ?? "");
+      } catch (e) {
+        console.error("Refresh failed:", e);
+      }
+    };
+
     void refresh();
     const id = setInterval(() => void refresh(), 3000);
     return () => clearInterval(id);
-  }, [authed, refresh]);
+  }, [authed]);
 
   async function login() {
     const res = await fetch("/api/console", {
@@ -107,7 +114,42 @@ export default function ConsolePage() {
     );
   }
 
-  const flags = teams.filter(
+  if (setup && phase === "LOBBY") {
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-4">
+        <div>
+          <h1 className="text-3xl font-bold">Event Setup</h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">Choose how many tables will participate in this event.</p>
+        </div>
+        <div className="space-y-4">
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold">Number of tables</span>
+            <input
+              type="number"
+              min="4"
+              max="12"
+              value={tableCount}
+              onChange={(e) => setTableCount(Math.max(4, Math.min(12, parseInt(e.target.value) || 4)))}
+              className="tap w-full rounded-lg border-2 border-[var(--fg)] bg-transparent px-3 py-2 text-center text-xl font-bold"
+            />
+          </label>
+          <p className="rounded-lg bg-[var(--fg)]/5 p-3 text-xs text-[var(--muted)]">
+            Tables will be seeded from T-01 through T-{String(tableCount).padStart(2, "0")}. Each table gets 5 roles: CFO, Tax, CIO, Procurement, Operations.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="tap rounded-lg border-2 border-[var(--fg)] bg-[var(--fg)] py-3 font-bold text-[var(--bg)]"
+          onClick={() => setSetup(false)}
+        >
+          Start LOBBY
+        </button>
+      </main>
+    );
+  }
+
+  const activeTeams = teams.filter((t) => t.table_no <= tableCount);
+  const flags = activeTeams.filter(
     (t) =>
       t.device_count < 3 ||
       (t.last_activity &&
@@ -205,7 +247,7 @@ export default function ConsolePage() {
             </tr>
           </thead>
           <tbody>
-            {teams.map((t) => (
+            {activeTeams.map((t) => (
               <tr
                 key={t.table_no}
                 className={`border-b border-[var(--fg)]/30 ${
