@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { authenticateDeviceToken, consoleTokenFromRequest, deviceTokenFromRequest, requireConsoleToken, AuthError } from "@/lib/auth";
 import { elapsedMs, formatClock, remainingInPhaseMs } from "@/lib/engines/clock";
-import { ECONOMY, EVENT_PHASE_ANNOUNCEMENTS } from "@/lib/config";
+import { ECONOMY } from "@/lib/config";
 import { selfTickOutageOnce } from "@/lib/db";
-import { getTick, publishGlobal } from "@/lib/sse";
+import { getTick } from "@/lib/sse";
 import { ensureEveryTableHasABadge } from "@/lib/badges";
 import {
   derivedCapital, foreignHeldForOthers, getDevice, getGameState, getTeam, listDevices,
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     // ~5s per instance and idempotent (SELECT FOR UPDATE); never awaited.
     // Middleware is deliberately NOT used — a Node-runtime middleware bundle
     // cannot resolve the DB stack on Vercel (MIDDLEWARE_INVOCATION_FAILED).
-    const tickResult = await selfTickOutageOnce().catch(() => null);
+    selfTickOutageOnce().catch(() => undefined);
 
     const scope = new URL(req.url).searchParams.get("scope") ?? "session";
     const storeKind = selectStoreKind();
@@ -31,13 +31,6 @@ export async function GET(req: Request) {
     const tick = await getTick();
     const elapsed = elapsedMs(gs);
     const remaining = remainingInPhaseMs(gs);
-
-    // Event Mode: when the timeline just auto-advanced, broadcast the phase
-    // announcement to every player screen (no facilitator action needed).
-    if (tickResult && typeof tickResult.advanced === "object" && tickResult.advanced.changed && gs.event_mode) {
-      const msg = EVENT_PHASE_ANNOUNCEMENTS[gs.phase];
-      if (msg) await publishGlobal({ banner: msg });
-    }
 
     if (scope === "projection" || scope === "leaderboard") {
       const source = pg ? pg.teams : listTeams().map((team) => ({ ...team, capital_aed: derivedCapital(team.table_no) }));

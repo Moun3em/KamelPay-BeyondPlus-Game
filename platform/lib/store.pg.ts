@@ -40,6 +40,7 @@ import {
   deckAllowedInPhase,
 } from "./scoring";
 import type { Phase, Role } from "./config";
+import { EVENT_PHASE_ANNOUNCEMENTS } from "./config";
 import type {
   CardAction,
   CardRow,
@@ -708,7 +709,14 @@ async function advanceTimelineTx(client: TransactionClient, now: Date): Promise<
     );
     if (phase === "C") await armOutagesTx(client, now);
   }
-  return { phase: transitions.at(-1)!, changed: true };
+  const lastPhase = transitions.at(-1)!;
+  // Event Mode: make the phase announcement the player-facing banner so
+  // /api/state polls (not just SSE ticks) deliver it.
+  if (current.event_mode) {
+    const msg = EVENT_PHASE_ANNOUNCEMENTS[lastPhase];
+    if (msg) await client.query("UPDATE game_state SET narrative_banner = $1 WHERE id = 1", [msg]);
+  }
+  return { phase: lastPhase, changed: true };
 }
 
 export async function advanceTimelinePg(now = new Date()): Promise<{ phase: Phase; changed: boolean }> {

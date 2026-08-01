@@ -1,4 +1,5 @@
 import { PHASE_DURATIONS_MS, type Phase } from "./config";
+import { EVENT_PHASE_ANNOUNCEMENTS } from "./config";
 import { elapsedMs, phaseFromElapsed } from "./engines/clock";
 import { armMemoryOutagesUnlocked } from "./outage.store";
 import {
@@ -99,5 +100,12 @@ export async function advanceMemoryTimelineUnlocked(now = new Date()): Promise<T
     });
     if (phase === "C") await armMemoryOutagesUnlocked(now);
   }
-  return { phase: transitions.at(-1)!, changed: true };
+  const lastPhase = transitions.at(-1)!;
+  // Event Mode: make the phase announcement the player-facing banner so
+  // /api/state polls (not just SSE ticks) deliver it.
+  if (getGameState().event_mode) {
+    const msg = EVENT_PHASE_ANNOUNCEMENTS[lastPhase];
+    if (msg) setGameState({ narrative_banner: msg });
+  }
+  return { phase: lastPhase, changed: true };
 }

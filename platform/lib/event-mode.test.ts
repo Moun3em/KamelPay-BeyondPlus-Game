@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CONSOLE_COOKIE, consoleSessionCookieValue } from "./session";
 import { getGameState, listEvents, loadSeedIntoMemory, setGameState } from "./store";
 import { POST as consolePOST } from "../app/api/console/route";
+import { advanceMemoryTimelineUnlocked } from "./timeline";
 import { EVENT_PHASE_ANNOUNCEMENTS, PHASES } from "./config";
 
 beforeEach(() => {
@@ -59,5 +60,27 @@ describe("phase announcements", () => {
       expect(EVENT_PHASE_ANNOUNCEMENTS[p as keyof typeof EVENT_PHASE_ANNOUNCEMENTS], `missing announcement for ${p}`).toBeTruthy();
     }
     expect(Object.keys(EVENT_PHASE_ANNOUNCEMENTS).every((p) => PHASES.includes(p as never))).toBe(true);
+  });
+
+  it("auto-sets the player-facing banner on timeline transitions in Event Mode", async () => {
+    setGameState({
+      phase: "TUTORIAL",
+      clock_started_at: new Date(Date.now() - 10 * 60_000).toISOString(),
+      event_mode: true,
+    });
+    const result = await advanceMemoryTimelineUnlocked(new Date());
+    expect(result.changed).toBe(true);
+    expect(getGameState().phase).toBe("A");
+    expect(getGameState().narrative_banner).toContain("Phase A");
+  });
+
+  it("leaves the banner untouched when Event Mode is off", async () => {
+    setGameState({
+      phase: "TUTORIAL",
+      clock_started_at: new Date(Date.now() - 10 * 60_000).toISOString(),
+      event_mode: false,
+    });
+    await advanceMemoryTimelineUnlocked(new Date());
+    expect(getGameState().narrative_banner).toBeNull();
   });
 });
