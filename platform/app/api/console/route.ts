@@ -68,17 +68,34 @@ export async function POST(req: Request) {
     // facilitator transaction (scan executors own their own transaction/lock).
     if (command.action === "console_scan") {
       // Deterministic per-table console device (devices.device_id is UUID).
-      const consoleDeviceId = `00000000-0000-4000-8000-${String(command.tableNo).padStart(12, "0")}`;
-      if (selectStoreKind() === "postgres") {
-        await sql.query(
-          `INSERT INTO devices (device_id, table_no, role) VALUES ($1, $2, 'ALL_ROLES')
-           ON CONFLICT (device_id) DO UPDATE SET table_no = $2, role = 'ALL_ROLES'`,
-          [consoleDeviceId, command.tableNo],
-        );
-      } else {
-        claimDevice(consoleDeviceId, command.tableNo, "ALL_ROLES");
+      // ALL_ROLES is preferred; fall back to TAX if a single-phone table already
+      // claimed ALL_ROLES (both scan-capable roles; UNIQUE(table_no, role)).
+      const scanRoles = ["ALL_ROLES", "TAX"] as const;
+      let session: { deviceId: string; tableNo: number; role: Role } | null = null;
+      for (const role of scanRoles) {
+        const deviceId = `00000000-0000-4000-8000-${String(command.tableNo).padStart(12, "0")}-${role === "TAX" ? "A" : "0"}`;
+        try {
+          if (selectStoreKind() === "postgres") {
+            await sql.query(
+              `INSERT INTO devices (device_id, table_no, role) VALUES ($1, $2, $3)
+               ON CONFLICT (device_id) DO UPDATE SET table_no = $2, role = $3`,
+              [deviceId, command.tableNo, role],
+            );
+          } else {
+            const claimed = claimDevice(deviceId, command.tableNo, role);
+            if (!claimed.ok) continue;
+          }
+          session = { deviceId, tableNo: command.tableNo, role };
+          break;
+        } catch (e) {
+          // pg UNIQUE(table_no, role) violation — try the next role
+          if (e instanceof MutationError) throw e;
+          continue;
+        }
       }
-      const session = { deviceId: consoleDeviceId, tableNo: command.tableNo, role: "ALL_ROLES" as Role };
+      if (!session) {
+        return NextResponse.json({ error: "This table already has active players — use a player device instead of the console rescue." }, { status: 409 });
+      }
       const result = selectStoreKind() === "postgres"
         ? await executeScanPg(session, {
             cardId: command.cardId, action: command.scanAction, idempotencyKey: command.idempotencyKey,
@@ -86,6 +103,15 @@ export async function POST(req: Request) {
         : await executeMemoryScan(session, {
             cardId: command.cardId, action: command.scanAction, idempotencyKey: command.idempotencyKey,
           });
+      // Release the temporary console device so a real phone can still claim
+      // ALL_ROLES/TAX on this table afterwards (single-phone tables).
+      try {
+        if (selectStoreKind() === "postgres") {
+          await sql.query("DELETE FROM devices WHERE device_id = $1", [session.deviceId]);
+        } else {
+          releaseDevice(session.deviceId);
+        }
+      } catch { /* cleanup is best-effort */ }
       await publishTable(command.tableNo);
       if (!result.ok) {
         return NextResponse.json({ error: result.error, hint: (result as { hint?: string }).hint }, { status: 409 });
