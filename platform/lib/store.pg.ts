@@ -3,6 +3,8 @@ import { elapsedMs, inFinalFiveMinutes, phaseFromElapsed } from "./engines/clock
 import { crossedTimedPhases, isForwardPhaseTransition, phaseStartElapsedMs } from "./timeline";
 import { outageOffsetSeconds } from "./engines/outage";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * TransactionClient — a wrapper that satisfies the existing call-site
@@ -115,6 +117,58 @@ function game(row: Row): GameStateRow {
 export async function getActiveTablesPg(): Promise<number> {
   const row = await queryOne(sql, "SELECT active_tables FROM game_state WHERE id = 1");
   return Number(row?.active_tables ?? 10);
+}
+
+/**
+ * Wipe game progress and reseed a pristine game from cards_seed.json.
+ * Guarded: refuses a wrong pin_seed. Runs inside the caller's transaction.
+ */
+export async function resetGamePg(client: TransactionClient): Promise<void> {
+  const seedPath = join(process.cwd(), "data", "cards_seed.json");
+  const seed = JSON.parse(readFileSync(seedPath, "utf8")) as {
+    meta: { pin_seed: string };
+    teams: { table_no: number; pin: string }[];
+    cards: Record<string, unknown>[];
+  };
+  if (seed.meta.pin_seed !== "kamelpay-2026-event-01") {
+    throw new MutationError(`Unexpected pin_seed ${seed.meta.pin_seed}; refusing to reset.`, 409);
+  }
+  await client.query("TRUNCATE operations, events, devices, card_positions, cards, teams, game_state RESTART IDENTITY CASCADE");
+  for (const team of seed.teams) {
+    await client.query(
+      "INSERT INTO teams (table_no, pin, capital_aed) VALUES ($1, $2, $3)",
+      [team.table_no, team.pin, 1_000_000],
+    );
+  }
+  for (const raw of seed.cards) {
+    const skip = new Set([
+      "card_id", "qr", "deck", "archetype", "owner_table", "held_by_table_at_setup",
+      "is_foreign_at_setup", "validity", "correct_action", "penalty_aed", "locked_until_phase",
+    ]);
+    const payload = Object.fromEntries(Object.entries(raw).filter(([k]) => !skip.has(k)));
+    await client.query(
+      `INSERT INTO cards (card_id, qr, deck, archetype, owner_table, validity, correct_action, penalty_aed, locked_until_phase, payload)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)`,
+      [
+        String(raw.card_id), String(raw.qr), String(raw.deck), String(raw.archetype), Number(raw.owner_table),
+        raw.validity == null ? null : String(raw.validity),
+        raw.correct_action == null ? null : String(raw.correct_action),
+        Number(raw.penalty_aed ?? raw.penalty ?? 0),
+        raw.locked_until_phase == null ? null : String(raw.locked_until_phase),
+        JSON.stringify(payload),
+      ],
+    );
+    await client.query(
+      "INSERT INTO card_positions (card_id, held_by_table, state) VALUES ($1, $2, 'PENDING')",
+      [String(raw.card_id), Number(raw.held_by_table_at_setup)],
+    );
+  }
+  await client.query(
+    `INSERT INTO game_state (id, phase, paused_ms_total, active_tables)
+     VALUES (1, 'LOBBY', 0, 10)
+     ON CONFLICT (id) DO UPDATE SET phase = 'LOBBY', clock_started_at = NULL,
+       clock_paused_at = NULL, paused_ms_total = 0, narrative_banner = NULL, active_tables = 10`,
+  );
 }
 
 async function queryOne(client: TransactionClient, text: string, values: unknown[] = []): Promise<Row | null> {
@@ -939,6 +993,15 @@ export async function executeFacilitatorPg(command: FacilitatorCommand) {
         await client.query("UPDATE game_state SET active_tables = $1 WHERE id = 1", [command.activeTables]);
         await audit({ activeTables: command.activeTables });
         break;
+      case "reset_game": {
+        const current = await queryOne(client, "SELECT phase FROM game_state WHERE id = 1 FOR UPDATE");
+        if (current && !["FROZEN", "DEBRIEF", "LOBBY"].includes(String(current.phase))) {
+          throw new MutationError("Cannot reset while a game is live — freeze or finish it first.", 409);
+        }
+        await resetGamePg(client);
+        await audit({});
+        break;
+      }
       case "adjust": {
         const currentGame = await queryOne(client, "SELECT phase FROM game_state WHERE id = 1 FOR UPDATE");
         if (currentGame?.phase === "FROZEN" || currentGame?.phase === "DEBRIEF") {

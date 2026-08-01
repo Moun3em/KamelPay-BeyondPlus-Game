@@ -182,6 +182,13 @@ function ConsoleAuthed() {
           </button>
           <button
             type="button"
+            className="tap rounded-xl border-2 border-[var(--kp-danger)] px-4 py-2 text-lg font-bold text-[var(--kp-danger)] transition-colors hover:bg-[var(--kp-danger)]/10"
+            onClick={() => void act("reset_game")}
+          >
+            Reset game (wipe all progress)
+          </button>
+          <button
+            type="button"
             className="tap rounded-xl border-2 border-[var(--kp-line)] px-4 py-2 text-lg font-semibold text-[var(--kp-mute)] transition-colors hover:border-[var(--kp-ink)]"
             onClick={() => router.push("/")}
           >

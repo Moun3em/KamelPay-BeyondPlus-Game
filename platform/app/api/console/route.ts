@@ -20,6 +20,7 @@ import {
   releaseRole,
   setGameState,
   getGameState,
+  loadSeedIntoMemory,
   updateTeam,
   derivedCapital,
   withMemoryTransaction,
@@ -145,6 +146,25 @@ export async function POST(req: Request) {
       });
       await publishGlobal({ activeTables: command.activeTables });
       return NextResponse.json({ ok: true, activeTables: command.activeTables });
+    }
+    case "reset_game": {
+      if (!["FROZEN", "DEBRIEF", "LOBBY"].includes(getGameState().phase)) {
+        return NextResponse.json({ error: "Cannot reset while a game is live — freeze or finish it first." }, { status: 409 });
+      }
+      loadSeedIntoMemory();
+      // The wipe replaced the memory object (and its operations map); re-reserve
+      // the current operation so the outer completeMemoryOperation() succeeds.
+      beginMemoryOperation(operationKey, "console:facilitator", command);
+      appendEvent({
+        table_no: 0,
+        actor_role: "FACILITATOR",
+        kind: "FACILITATOR_ACTION",
+        delta_aed: 0,
+        idempotency_key: `${operationKey}:reset`,
+        meta: { action: "reset_game", reason: command.reason },
+      });
+      await publishGlobal({ activeTables: 10 });
+      return NextResponse.json({ ok: true, reset: true, phase: "LOBBY" });
     }
     case "broadcast": {
       setGameState({ narrative_banner: command.banner || null });
