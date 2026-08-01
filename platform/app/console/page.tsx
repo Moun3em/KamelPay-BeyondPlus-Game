@@ -39,7 +39,7 @@ export default function ConsolePage() {
             const res = await fetch("/api/console", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "auth", pin }),
+              body: JSON.stringify({ action: "login", pin }),
             });
             if (!res.ok) {
               const j = await res.json();
@@ -103,7 +103,7 @@ function ConsoleAuthed() {
   const act = useCallback(
     async (action: string, extra: Record<string, unknown> = {}) => {
       setError(null);
-      if (!reason.trim() && action !== "auth") {
+      if (!reason.trim() && action !== "login") {
         setError("Audit reason is required for every action.");
         return;
       }
