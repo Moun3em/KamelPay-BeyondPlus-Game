@@ -44,7 +44,7 @@ export async function GET(req: Request) {
       })).sort((a, b) => b.capital_aed - a.capital_aed);
       return NextResponse.json({ phase: gs.phase, banner: gs.narrative_banner,
         clock: formatClock(remaining || elapsed), remaining_ms: remaining, elapsed_ms: elapsed,
-        paused: Boolean(gs.clock_paused_at), teams, tick, store: storeKind });
+        paused: Boolean(gs.clock_paused_at), teams, tick, store: storeKind, activeTables: gs.activeTables });
     }
 
     if (scope === "console") {
@@ -65,7 +65,8 @@ export async function GET(req: Request) {
           badges: team.badges, last_activity: events.at(-1)?.at ?? null };
       });
       return NextResponse.json({ phase: gs.phase, banner: gs.narrative_banner,
-        clock_started_at: gs.clock_started_at, paused: Boolean(gs.clock_paused_at), remaining_ms: remaining, teams });
+        clock_started_at: gs.clock_started_at, paused: Boolean(gs.clock_paused_at), remaining_ms: remaining, teams,
+        activeTables: gs.activeTables });
     }
 
     const session = await authenticateDeviceToken(

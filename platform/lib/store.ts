@@ -60,6 +60,7 @@ function emptyGame(): GameStateRow {
     clock_paused_at: null,
     paused_ms_total: 0,
     narrative_banner: null,
+    activeTables: 10,
   };
 }
 
@@ -268,7 +269,10 @@ export function getTeam(tableNo: number) {
 
 export function listTeams() {
   ensureMemorySeeded();
-  return [...db().teams.values()].sort((a, b) => a.table_no - b.table_no);
+  const active = db().game.activeTables;
+  return [...db().teams.values()]
+    .filter((t) => t.table_no <= active)
+    .sort((a, b) => a.table_no - b.table_no);
 }
 
 export function updateTeam(

@@ -133,6 +133,11 @@ export async function POST(req: Request) {
       await publishGlobal();
       return NextResponse.json({ ok: true, paused: false });
     }
+    case "set_active_tables": {
+      setGameState({ activeTables: command.activeTables });
+      await publishGlobal({ activeTables: command.activeTables });
+      return NextResponse.json({ ok: true, activeTables: command.activeTables });
+    }
     case "broadcast": {
       setGameState({ narrative_banner: command.banner || null });
       await publishGlobal({ banner: command.banner || null });

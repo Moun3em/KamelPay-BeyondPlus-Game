@@ -111,6 +111,7 @@ export interface GameStateRow {
   clock_paused_at: string | null;
   paused_ms_total: number;
   narrative_banner: string | null;
+  activeTables: number;
 }
 
 export interface DeviceSession {

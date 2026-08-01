@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatClock } from "@/lib/engines/clock";
 import { usePlayerState } from "@/components/ui";
-import { PHASES } from "@/lib/config";
+import { ACTIVE_TABLES, PHASES } from "@/lib/config";
 
 export default function ConsolePage() {
   const router = useRouter();
@@ -93,6 +93,14 @@ function ConsoleAuthed() {
   const [tradeFrom, setTradeFrom] = useState("");
   const [tradeTo, setTradeTo] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [activeTablesDraft, setActiveTablesDraft] = useState<number>(Number(data?.activeTables ?? ACTIVE_TABLES.default));
+
+  useEffect(() => {
+    setActiveTablesDraft((prev) => {
+      const current = Number(data?.activeTables ?? ACTIVE_TABLES.default);
+      return prev === Number(data?.activeTables ?? ACTIVE_TABLES.default) ? current : prev;
+    });
+  }, [data?.activeTables]);
 
   useEffect(() => {
     if (!teams.find((t) => t.table_no === selected) && teams.length > 0) {
@@ -214,6 +222,31 @@ function ConsoleAuthed() {
             {p}
           </button>
         ))}
+      </section>
+
+      <section className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border-2 border-[var(--kp-line)] bg-white p-3">
+        <span className="text-lg font-bold text-[var(--kp-ink)]">Active tables</span>
+        <select
+          aria-label="Active tables count"
+          className="tap rounded-lg border-2 border-[var(--kp-line)] bg-white px-3 py-2 text-lg font-bold text-[var(--kp-ink)] focus:border-[var(--kp-blue)] focus:outline-none"
+          value={String(activeTablesDraft)}
+          onChange={(e) => setActiveTablesDraft(Number(e.target.value))}
+        >
+          {Array.from({ length: ACTIVE_TABLES.max - ACTIVE_TABLES.min + 1 }, (_, i) => ACTIVE_TABLES.min + i).map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="tap rounded-xl bg-[var(--kp-blue)] px-5 py-2 text-lg font-bold text-white transition-colors hover:opacity-90"
+          onClick={() => void act("set_active_tables", { activeTables: activeTablesDraft })}
+        >
+          Set
+        </button>
+        <span className="text-lg text-[var(--kp-slate)]">
+          T-01…T-{String(activeTablesDraft).padStart(2, "0")} in play
+          {activeTablesDraft !== Number(data?.activeTables ?? 10) ? " — not yet applied" : ""}
+        </span>
       </section>
 
       <section className="mb-6 flex flex-col gap-3 sm:flex-row">

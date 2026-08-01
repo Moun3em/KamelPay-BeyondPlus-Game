@@ -12,6 +12,7 @@ import { friendlyError } from "@/lib/error-response";
 import {
   appendEvent,
   claimDevice,
+  getGameState,
   getTeam,
   listDevices,
   verifyPin,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/store";
 import {
   claimDevicePg,
+  getActiveTablesPg,
   getTeamPg,
   listDevicesPg,
   MutationError,
@@ -47,6 +49,14 @@ export async function POST(req: Request) {
     if (!role) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
 
     const kind = selectStoreKind();
+    const activeTables = kind === "postgres"
+      ? await getActiveTablesPg()
+      : getGameState().activeTables;
+    if (tableNo > activeTables) {
+      return NextResponse.json({
+        error: `T-${String(tableNo).padStart(2, "0")} is not in play today — only T-01 to T-${String(activeTables).padStart(2, "0")} are active`,
+      }, { status: 409 });
+    }
     const pinOk = body.pin && (kind === "postgres"
       ? await verifyPinPg(tableNo, body.pin)
       : verifyPin(tableNo, body.pin));

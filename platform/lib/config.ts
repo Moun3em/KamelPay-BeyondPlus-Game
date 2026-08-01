@@ -25,6 +25,14 @@ export const ECONOMY = {
   },
 } as const;
 
+/** Runtime-scoped active tables. The pack prints 10; the facilitator can
+ * bring 3–10 into play (first N tables). Never regenerates PINs. */
+export const ACTIVE_TABLES = {
+  min: 3,
+  max: 10,
+  default: 10,
+} as const;
+
 export const PHASES = [
   "LOBBY",
   "TUTORIAL",

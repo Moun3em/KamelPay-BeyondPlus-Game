@@ -107,7 +107,14 @@ function game(row: Row): GameStateRow {
     clock_paused_at: row.clock_paused_at == null ? null : new Date(String(row.clock_paused_at)).toISOString(),
     paused_ms_total: Number(row.paused_ms_total ?? 0),
     narrative_banner: row.narrative_banner == null ? null : String(row.narrative_banner),
+    activeTables: Number(row.active_tables ?? 10),
   };
+}
+
+/** Active table count (3–10) from the single-row game_state. */
+export async function getActiveTablesPg(): Promise<number> {
+  const row = await queryOne(sql, "SELECT active_tables FROM game_state WHERE id = 1");
+  return Number(row?.active_tables ?? 10);
 }
 
 async function queryOne(client: TransactionClient, text: string, values: unknown[] = []): Promise<Row | null> {
@@ -817,7 +824,9 @@ export async function stateSnapshotPg(tableNo?: number) {
     card_id: row.card_id == null ? null : String(row.card_id), delta_aed: Number(row.delta_aed),
     meta: (row.meta as Record<string, unknown> | null) ?? null,
   }));
-  const teams = teamsResult.rows.map((row) => {
+  const teams = teamsResult.rows
+    .filter((row) => Number(row.table_no) <= Number(gameRow.active_tables ?? 10))
+    .map((row) => {
     const value = team(row);
     const tableEvents = events.filter((event) => event.table_no === value.table_no);
     const devices = devicesResult.rows.filter((device) => Number(device.table_no) === value.table_no);
@@ -848,6 +857,7 @@ export type FacilitatorCommand = {
   badge?: string;
   role?: Role;
   deviceId?: string;
+  activeTables?: number;
 };
 
 export async function executeFacilitatorPg(command: FacilitatorCommand) {
@@ -921,6 +931,10 @@ export async function executeFacilitatorPg(command: FacilitatorCommand) {
       case "broadcast":
         await client.query("UPDATE game_state SET narrative_banner = $1 WHERE id = 1", [command.banner ?? null]);
         await audit({ banner: command.banner ?? null });
+        break;
+      case "set_active_tables":
+        await client.query("UPDATE game_state SET active_tables = $1 WHERE id = 1", [command.activeTables]);
+        await audit({ activeTables: command.activeTables });
         break;
       case "adjust": {
         const currentGame = await queryOne(client, "SELECT phase FROM game_state WHERE id = 1 FOR UPDATE");

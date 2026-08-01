@@ -1,10 +1,11 @@
-import { ECONOMY, PHASES, ROLES, type Phase, type Role } from "./config";
+import { ACTIVE_TABLES, ECONOMY, PHASES, ROLES, type Phase, type Role } from "./config";
 import { BADGE_LABELS, type BadgeCode } from "./engines/badges";
 
 export const MAX_FACILITATOR_ADJUST_AED = ECONOMY.starting_capital;
 const ACTIONS = [
   "set_phase", "pause", "resume", "broadcast", "adjust", "force_resolve_outage",
   "unlock_green", "award_badge", "ensure_badges", "release_role", "reset_device", "kill",
+  "set_active_tables",
 ] as const;
 type Action = (typeof ACTIONS)[number];
 
@@ -17,6 +18,7 @@ export type FacilitatorCommand =
   | (Common & { action: "award_badge"; tableNo: number; badge: BadgeCode })
   | (Common & { action: "release_role"; tableNo: number; role: Role })
   | (Common & { action: "reset_device"; deviceId: string })
+  | (Common & { action: "set_active_tables"; activeTables: number })
   | (Common & { action: "pause" | "resume" | "ensure_badges" | "kill" });
 
 function boundedText(value: unknown, name: string, max: number, allowEmpty = false): string {
@@ -46,6 +48,7 @@ export function validateFacilitatorCommand(input: unknown): FacilitatorCommand {
     set_phase: ["phase"], pause: [], resume: [], broadcast: ["banner"], adjust: ["tableNo", "amount"],
     force_resolve_outage: ["tableNo"], unlock_green: ["tableNo"], award_badge: ["tableNo", "badge"],
     ensure_badges: [], release_role: ["tableNo", "role"], reset_device: ["deviceId"], kill: [],
+    set_active_tables: ["activeTables"],
   };
   const allowed = new Set(["action", "reason", "idempotencyKey", ...actionFields[action]]);
   const unknown = Object.keys(raw).find((key) => !allowed.has(key));
@@ -78,6 +81,13 @@ export function validateFacilitatorCommand(input: unknown): FacilitatorCommand {
       const deviceId = boundedText(raw.deviceId, "deviceId", 36);
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(deviceId)) throw new Error("Invalid device UUID");
       return { ...common, action, deviceId };
+    }
+    case "set_active_tables": {
+      const n = raw.activeTables;
+      if (typeof n !== "number" || !Number.isInteger(n) || n < ACTIVE_TABLES.min || n > ACTIVE_TABLES.max) {
+        throw new Error(`Active tables must be an integer between ${ACTIVE_TABLES.min} and ${ACTIVE_TABLES.max}`);
+      }
+      return { ...common, action, activeTables: n };
     }
     case "pause": case "resume": case "ensure_badges": case "kill":
       return { ...common, action };

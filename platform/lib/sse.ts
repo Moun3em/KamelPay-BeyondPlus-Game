@@ -8,6 +8,7 @@ type TickPayload = {
   at: number;
   phase?: string;
   banner?: string | null;
+  activeTables?: number;
   leaderboard?: { table_no: number; capital_aed: number; badges: string[] }[];
 };
 
