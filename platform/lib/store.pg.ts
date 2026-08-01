@@ -124,6 +124,10 @@ export async function getActiveTablesPg(): Promise<number> {
  * Guarded: refuses a wrong pin_seed. Runs inside the caller's transaction.
  */
 export async function resetGamePg(client: TransactionClient): Promise<void> {
+  // NOTE: TRUNCATE wipes the operations table, so a same-key replay on PG
+  // re-executes the reset instead of short-circuiting. Outcome is identical
+  // (fresh LOBBY, 10 teams) and the phase gate still guards live games —
+  // acceptable; the memory path's re-reserve keeps IT replay-safe.
   const seedPath = join(process.cwd(), "data", "cards_seed.json");
   const seed = JSON.parse(readFileSync(seedPath, "utf8")) as {
     meta: { pin_seed: string };

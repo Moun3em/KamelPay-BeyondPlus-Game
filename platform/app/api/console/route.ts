@@ -149,7 +149,9 @@ export async function POST(req: Request) {
     }
     case "reset_game": {
       if (!["FROZEN", "DEBRIEF", "LOBBY"].includes(getGameState().phase)) {
-        return NextResponse.json({ error: "Cannot reset while a game is live — freeze or finish it first." }, { status: 409 });
+        // Throw (not return) so withMemoryTransaction rolls back the generic
+        // FACILITATOR_ACTION appendEvent and the operation reservation.
+        throw new MutationError("Cannot reset while a game is live — freeze or finish it first.", 409);
       }
       loadSeedIntoMemory();
       // The wipe replaced the memory object (and its operations map); re-reserve
