@@ -22,9 +22,23 @@ function kvConfigured(): boolean {
   );
 }
 
-async function getKv() {
-  const { kv } = await import("@vercel/kv");
-  return kv;
+/** Minimal surface of @vercel/kv used here. Cast through this so the module
+ * compiles regardless of which @vercel/kv type shape resolves in a given
+ * build environment (the KV path is inert when KV_REST_API_URL is unset). */
+type KvLike = {
+  set(key: string, value: unknown): Promise<void>;
+  get<T>(key: string): Promise<T | null>;
+  publish(channel: string, value: string): Promise<number>;
+};
+
+let kvInstance: KvLike | null = null;
+
+async function getKv(): Promise<KvLike> {
+  if (!kvInstance) {
+    const mod = (await import("@vercel/kv")) as unknown as { kv: KvLike };
+    kvInstance = mod.kv;
+  }
+  return kvInstance;
 }
 
 export async function publishGlobal(partial?: Partial<TickPayload>): Promise<TickPayload> {
