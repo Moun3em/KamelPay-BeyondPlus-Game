@@ -173,7 +173,8 @@ export async function resetGamePg(client: TransactionClient): Promise<void> {
     `INSERT INTO game_state (id, phase, paused_ms_total, active_tables)
      VALUES (1, 'LOBBY', 0, 10)
      ON CONFLICT (id) DO UPDATE SET phase = 'LOBBY', clock_started_at = NULL,
-       clock_paused_at = NULL, paused_ms_total = 0, narrative_banner = NULL, active_tables = 10`,
+       clock_paused_at = NULL, paused_ms_total = 0, narrative_banner = NULL, active_tables = 10,
+       event_mode = FALSE`,
   );
 }
 

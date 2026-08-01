@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { usePlayerState } from "@/components/ui";
+import { PhaseBanner, usePlayerState } from "@/components/ui";
 
 export default function TradePortalPage() {
   const router = useRouter();
@@ -69,6 +69,7 @@ export default function TradePortalPage() {
       <p className="text-[var(--muted)]">
         You cannot close your ledger from this chair.
       </p>
+      {data?.banner ? <PhaseBanner text={String(data.banner)} /> : null}
     </main>
   );
 }

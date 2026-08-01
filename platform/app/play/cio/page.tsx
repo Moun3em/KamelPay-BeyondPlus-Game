@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { WhyModal, usePlayerState } from "@/components/ui";
+import { PhaseBanner, WhyModal, usePlayerState } from "@/components/ui";
 import type { TeachingModal } from "@/lib/types";
 
 export default function CioPage() {
@@ -112,6 +112,7 @@ sequence required`}
         {modal ? (
           <WhyModal modal={modal} onDismiss={() => setModal(null)} />
         ) : null}
+        {data?.banner ? <PhaseBanner text={String(data.banner)} /> : null}
       </main>
     );
   }

@@ -86,6 +86,7 @@ export async function reconcileCapital(tableNo: number): Promise<number> {
  * idempotent and uses SELECT FOR UPDATE under the hood.
  */
 import type { TimelineResult } from "./timeline";
+import { publishGlobal } from "./sse";
 
 let lastTickAt = 0;
 let lastTickPromise: Promise<unknown> | null = null;
@@ -110,6 +111,7 @@ export async function selfTickOutageOnce(now: Date = new Date()): Promise<{
       const { advanceTimelineOnce } = await import("./timeline");
       const { tickOutagesOnce } = await import("./outage.catchup");
       const advanced = await advanceTimelineOnce(now);
+      if (advanced.changed) await publishGlobal().catch(() => undefined);
       const ticks = await tickOutagesOnce(now);
       return { advanced, ticks };
     } finally {

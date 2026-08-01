@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { usePlayerState } from "@/components/ui";
+import { PhaseBanner, usePlayerState } from "@/components/ui";
 
 export default function AllRolesPage() {
   const router = useRouter();
@@ -36,6 +36,7 @@ export default function AllRolesPage() {
           {l.label}
         </Link>
       ))}
+      {data?.banner ? <PhaseBanner text={String(data.banner)} /> : null}
     </main>
   );
 }

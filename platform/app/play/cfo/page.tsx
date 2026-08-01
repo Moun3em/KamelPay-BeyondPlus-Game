@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { formatAed, usePlayerState } from "@/components/ui";
+import { formatAed, PhaseBanner, usePlayerState } from "@/components/ui";
 import { formatClock } from "@/lib/engines/clock";
 
 export default function CfoPage() {
@@ -116,15 +116,7 @@ export default function CfoPage() {
         ) : null}
       </section>
 
-      {data?.banner ? (
-        <p
-          role="status"
-          className="rounded-2xl border border-[var(--kp-warn)] bg-[var(--kp-warn)]/10 p-4 text-lg font-semibold text-[var(--kp-ink)]"
-        >
-          <span aria-hidden className="mr-2">📢</span>
-          {String(data.banner)}
-        </p>
-      ) : null}
+      {data?.banner ? <PhaseBanner text={String(data.banner)} /> : null}
     </main>
   );
 }

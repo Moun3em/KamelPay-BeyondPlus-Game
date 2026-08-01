@@ -130,3 +130,16 @@ export function usePlayerState(pollMs = 5000) {
 export function formatAed(n: number): string {
   return `AED ${n.toLocaleString()}`;
 }
+
+/** Player-facing announcement banner (Event Mode phase messages + broadcasts). */
+export function PhaseBanner({ text }: { text: string }) {
+  return (
+    <p
+      role="status"
+      className="rounded-2xl border border-[var(--kp-warn)] bg-[var(--kp-warn)]/10 p-4 text-lg font-semibold text-[var(--kp-ink)]"
+    >
+      <span aria-hidden className="mr-2">📢</span>
+      {text}
+    </p>
+  );
+}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { WhyModal, usePlayerState } from "@/components/ui";
+import { PhaseBanner, WhyModal, usePlayerState } from "@/components/ui";
 import type { TeachingModal } from "@/lib/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -214,6 +214,7 @@ export default function TaxScannerPage() {
       {modal ? (
         <WhyModal modal={modal} onDismiss={() => setModal(null)} />
       ) : null}
+      {data?.banner ? <PhaseBanner text={String(data.banner)} /> : null}
     </main>
   );
 }
