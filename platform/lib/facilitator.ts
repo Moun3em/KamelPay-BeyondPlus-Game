@@ -5,7 +5,7 @@ export const MAX_FACILITATOR_ADJUST_AED = ECONOMY.starting_capital;
 const ACTIONS = [
   "set_phase", "pause", "resume", "broadcast", "adjust", "force_resolve_outage",
   "unlock_green", "award_badge", "ensure_badges", "release_role", "reset_device", "kill",
-  "set_active_tables", "reset_game",
+  "set_active_tables", "reset_game", "set_event_mode",
 ] as const;
 type Action = (typeof ACTIONS)[number];
 
@@ -19,6 +19,7 @@ export type FacilitatorCommand =
   | (Common & { action: "release_role"; tableNo: number; role: Role })
   | (Common & { action: "reset_device"; deviceId: string })
   | (Common & { action: "set_active_tables"; activeTables: number })
+  | (Common & { action: "set_event_mode"; eventMode: boolean })
   | (Common & { action: "reset_game" })
   | (Common & { action: "pause" | "resume" | "ensure_badges" | "kill" });
 
@@ -49,7 +50,7 @@ export function validateFacilitatorCommand(input: unknown): FacilitatorCommand {
     set_phase: ["phase"], pause: [], resume: [], broadcast: ["banner"], adjust: ["tableNo", "amount"],
     force_resolve_outage: ["tableNo"], unlock_green: ["tableNo"], award_badge: ["tableNo", "badge"],
     ensure_badges: [], release_role: ["tableNo", "role"], reset_device: ["deviceId"], kill: [],
-    set_active_tables: ["activeTables"], reset_game: [],
+    set_active_tables: ["activeTables"], reset_game: [], set_event_mode: ["eventMode"],
   };
   const allowed = new Set(["action", "reason", "idempotencyKey", ...actionFields[action]]);
   const unknown = Object.keys(raw).find((key) => !allowed.has(key));
@@ -89,6 +90,10 @@ export function validateFacilitatorCommand(input: unknown): FacilitatorCommand {
         throw new Error(`Active tables must be an integer between ${ACTIVE_TABLES.min} and ${ACTIVE_TABLES.max}`);
       }
       return { ...common, action, activeTables: n };
+    }
+    case "set_event_mode": {
+      if (typeof raw.eventMode !== "boolean") throw new Error("eventMode must be a boolean");
+      return { ...common, action, eventMode: raw.eventMode };
     }
     case "reset_game":
       return { ...common, action };

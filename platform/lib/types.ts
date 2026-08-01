@@ -112,6 +112,7 @@ export interface GameStateRow {
   paused_ms_total: number;
   narrative_banner: string | null;
   activeTables: number;
+  event_mode: boolean;
 }
 
 export interface DeviceSession {

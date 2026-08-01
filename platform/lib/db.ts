@@ -85,12 +85,14 @@ export async function reconcileCapital(tableNo: number): Promise<number> {
  * request hot path. Safe because every underlying mutation is
  * idempotent and uses SELECT FOR UPDATE under the hood.
  */
+import type { TimelineResult } from "./timeline";
+
 let lastTickAt = 0;
 let lastTickPromise: Promise<unknown> | null = null;
 const TICK_THROTTLE_MS = 5_000;
 
 export async function selfTickOutageOnce(now: Date = new Date()): Promise<{
-  advanced: number;
+  advanced: number | TimelineResult;
   ticks: number;
   ran: boolean;
 }> {

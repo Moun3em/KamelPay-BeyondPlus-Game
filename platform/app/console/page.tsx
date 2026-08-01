@@ -74,6 +74,7 @@ function ConsoleAuthed() {
   const phase = String(data?.phase ?? "—");
   const remaining = Number(data?.remaining_ms ?? 0);
   const paused = Boolean(data?.paused);
+  const eventMode = Boolean(data?.eventMode);
   const teams = (data?.teams as Array<{
     table_no: number;
     device_count: number;
@@ -186,6 +187,17 @@ function ConsoleAuthed() {
             onClick={() => void act("reset_game")}
           >
             Reset game (wipe all progress)
+          </button>
+          <button
+            type="button"
+            className={`tap rounded-xl border-2 px-4 py-2 text-lg font-bold transition-colors ${
+              eventMode
+                ? "border-[var(--kp-success)] bg-[var(--kp-success)] text-white"
+                : "border-[var(--kp-line)] bg-white text-[var(--kp-ink)] hover:border-[var(--kp-ink)]"
+            }`}
+            onClick={() => void act("set_event_mode", { eventMode: !eventMode })}
+          >
+            {eventMode ? "EVENT MODE: ON" : "EVENT MODE: OFF"}
           </button>
           <button
             type="button"

@@ -110,6 +110,7 @@ function game(row: Row): GameStateRow {
     paused_ms_total: Number(row.paused_ms_total ?? 0),
     narrative_banner: row.narrative_banner == null ? null : String(row.narrative_banner),
     activeTables: Number(row.active_tables ?? 10),
+    event_mode: Boolean(row.event_mode ?? false),
   };
 }
 
@@ -919,6 +920,7 @@ export type FacilitatorCommand = {
   role?: Role;
   deviceId?: string;
   activeTables?: number;
+  eventMode?: boolean;
 };
 
 export async function executeFacilitatorPg(command: FacilitatorCommand) {
@@ -996,6 +998,10 @@ export async function executeFacilitatorPg(command: FacilitatorCommand) {
       case "set_active_tables":
         await client.query("UPDATE game_state SET active_tables = $1 WHERE id = 1", [command.activeTables]);
         await audit({ activeTables: command.activeTables });
+        break;
+      case "set_event_mode":
+        await client.query("UPDATE game_state SET event_mode = $1 WHERE id = 1", [Boolean(command.eventMode)]);
+        await audit({ eventMode: command.eventMode });
         break;
       case "reset_game": {
         const current = await queryOne(client, "SELECT phase FROM game_state WHERE id = 1 FOR UPDATE");

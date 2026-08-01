@@ -61,6 +61,7 @@ function emptyGame(): GameStateRow {
     paused_ms_total: 0,
     narrative_banner: null,
     activeTables: 10,
+    event_mode: false,
   };
 }
 

@@ -52,6 +52,19 @@ export const PHASE_DURATIONS_MS: Record<string, number> = {
   C: 20 * 60_000,
 };
 
+/**
+ * Event Mode announcements — factual phase messages broadcast to player
+ * phones automatically when the timeline transitions (Event Mode only).
+ * No regulatory claims; plain phase guidance.
+ */
+export const EVENT_PHASE_ANNOUNCEMENTS: Partial<Record<Phase, string>> = {
+  TUTORIAL: "Phase TUTORIAL — practice scan: try a card, learn the scanner and the decision.",
+  A: "Phase A — Internal Audit: scanning is open. Read each invoice, then FILE or QUARANTINE.",
+  B: "Phase B — Trading is open: OPS & Procurement, return foreign invoices to their owners via the ASP for a network bonus.",
+  C: "Phase C — Outages are striking. CIOs: fix your systems before the capital drains.",
+  FROZEN: "Game over — the leaderboard is frozen. Well played!",
+};
+
 export const ROLES = [
   "CFO",
   "TAX",

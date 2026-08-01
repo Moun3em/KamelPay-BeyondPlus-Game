@@ -147,6 +147,11 @@ export async function POST(req: Request) {
       await publishGlobal({ activeTables: command.activeTables });
       return NextResponse.json({ ok: true, activeTables: command.activeTables });
     }
+    case "set_event_mode": {
+      setGameState({ event_mode: command.eventMode });
+      await publishGlobal();
+      return NextResponse.json({ ok: true, eventMode: command.eventMode });
+    }
     case "reset_game": {
       if (!["FROZEN", "DEBRIEF", "LOBBY"].includes(getGameState().phase)) {
         // Throw (not return) so withMemoryTransaction rolls back the generic
