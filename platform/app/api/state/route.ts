@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { authenticateDeviceToken, consoleTokenFromRequest, deviceTokenFromRequest, requireConsoleToken, AuthError } from "@/lib/auth";
 import { elapsedMs, formatClock, remainingInPhaseMs } from "@/lib/engines/clock";
 import { ECONOMY } from "@/lib/config";
+import { selfTickOutageOnce } from "@/lib/db";
 import { getTick } from "@/lib/sse";
 import { ensureEveryTableHasABadge } from "@/lib/badges";
 import {
@@ -16,6 +17,13 @@ export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   try {
+    // Opportunistic self-tick (Vercel Hobby caps minutely cron): drive the
+    // timeline/outage tick from the request hot path. Throttled to once per
+    // ~5s per instance and idempotent (SELECT FOR UPDATE); never awaited.
+    // Middleware is deliberately NOT used — a Node-runtime middleware bundle
+    // cannot resolve the DB stack on Vercel (MIDDLEWARE_INVOCATION_FAILED).
+    selfTickOutageOnce().catch(() => undefined);
+
     const scope = new URL(req.url).searchParams.get("scope") ?? "session";
     const storeKind = selectStoreKind();
     const pg = storeKind === "postgres" ? await stateSnapshotPg() : null;
