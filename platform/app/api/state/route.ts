@@ -84,6 +84,13 @@ export async function GET(req: Request) {
       devices, tick });
   } catch (error) {
     if (error instanceof AuthError) return NextResponse.json({ error: error.message }, { status: error.status });
-    throw error;
+    // Don't leak internal stack traces or driver messages to clients.
+    // Log full detail to stderr for the facilitator / operator, and
+    // return a friendly, non-revealing message.
+    console.error("[api/state] unhandled error:", error);
+    return NextResponse.json(
+      { error: "Game state unavailable" },
+      { status: 503 },
+    );
   }
 }

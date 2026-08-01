@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { friendlyError } from "@/lib/error-response";
 
 import { getConfig, type Phase } from "@/lib/config";
 import { CONSOLE_COOKIE, consoleSessionCookieValue, sessionCookieOptions } from "@/lib/session";
@@ -252,6 +253,6 @@ export async function POST(req: Request) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    throw error;
+    return friendlyError("[api/console]", error, "Console action failed");
   }
 }

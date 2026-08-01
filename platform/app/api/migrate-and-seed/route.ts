@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AuthError, requireServerTick } from "@/lib/auth";
 import { sql } from "@/lib/db";
+import { friendlyError } from "@/lib/error-response";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    throw error;
+    return friendlyError("[api/migrate-and-seed]", error, "Migrate failed");
   }
 
   // 1) Apply schema (everything is CREATE ... IF NOT EXISTS so re-runs are safe)

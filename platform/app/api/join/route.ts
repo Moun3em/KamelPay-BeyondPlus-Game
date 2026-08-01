@@ -8,6 +8,7 @@ import {
   sessionCookieValue,
 } from "@/lib/session";
 import { cookieValue } from "@/lib/auth";
+import { friendlyError } from "@/lib/error-response";
 import {
   appendEvent,
   claimDevice,
@@ -86,7 +87,7 @@ export async function POST(req: Request) {
     if (error instanceof MutationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    throw error;
+    return friendlyError("[api/join]", error, "Could not join table");
   }
 }
 

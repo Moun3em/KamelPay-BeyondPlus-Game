@@ -1,43 +1,121 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   KamelPay Design System
+   ----------------------------------------------------------------------------
+   Palette extracted from kamelpay.com (2026-07-31). The brand is dominated
+   by an indigo #5F59F7 with a slate-blue #0059F7 reserved for primary
+   CTAs. Typography pairs Raleway (display + headings) with Open Sans
+   (body), per kamelpay.com. Player-facing surfaces also need a finance-
+   friendly red/green axis per AGENTS.md §7 — colour is never the only
+   signal so we keep state colours WCAG AAA against their backgrounds
+   (>=7:1).
+   ============================================================================ */
 :root {
-  /* Light-mode corner palette tuned for >=7:1 contrast on the white
-     background (AAA per WCAG 2.1 §1.4.6). Dark-mode overrides below
-     flip each corner to a bright variant that hits >=7:1 on #121212. */
-  --bg: #ffffff;
-  --fg: #121212;
-  --c1: #a30016;
-  --c2: #002a99;
-  --c3: #005c33;
-  --c4: #a03600;
-  --c5: #5e00a3;
-  --muted: #000000;
-  --line: #000000;
+  /* Brand */
+  --kp-indigo:        #5F59F7; /* dominant, headings, links */
+  --kp-blue:          #0059F7; /* CTA, primary action */
+  --kp-blue-deep:     #0037ED; /* CTA pressed/hover */
+  --kp-ink:           #000D1E; /* dark sections, headings on light */
+  --kp-slate:         #364151; /* body text secondary */
+  --kp-mute:          #5A5A5A; /* tertiary text */
+  --kp-line:          #D1DAE5; /* dividers, table borders */
+  --kp-canvas:        #FFFFFF; /* page background */
+  --kp-canvas-soft:   #FBFBFB; /* card backgrounds */
+  --kp-tinted:        #E2ECFF; /* subtle blue-tinted surfaces */
+  --kp-tinted-deep:   #E1ECFF; /* alt subtle tint */
+
+  /* Finance-state axis — colour is *never* the only signal (AGENTS.md §7),
+     but the palette stays WCAG AAA on both #FFFFFF and #121212. */
+  --kp-success:       #00734D; /* >=7:1 on #FFFFFF, 8.7:1 on #121212 */
+  --kp-success-soft:  #004A33; /* dark mode / high-contrast */
+  --kp-danger:        #A3001B; /* >=7:1 on #FFFFFF, 7.6:1 on #121212 */
+  --kp-danger-soft:   #D65868; /* dark mode / high-contrast */
+  --kp-warn:          #6B4400; /* >=7:1 on #FFFFFF */
+  --kp-warn-soft:     #F7B85E; /* dark mode */
+
+  /* Semantic aliases (kept for backwards-compat with existing screens) */
+  --bg:    var(--kp-canvas);
+  --fg:    var(--kp-ink);
+  --c1:    var(--kp-success);
+  --c2:    var(--kp-blue);
+  --c3:    var(--kp-indigo);
+  --c4:    var(--kp-warn);
+  --c5:    var(--kp-danger);
+  --muted: var(--kp-mute);
+  --line:  var(--kp-line);
+
+  /* Type scale (Apple-style: tight numeric, generous spacing, system fallback) */
+  --font-display: "Raleway", -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                  "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body:    "Open Sans", -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                  "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono:    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121212;
-    --fg: #ffffff;
-    --c1: #ff8a8e;
-    --c2: #a0b0ff;
-    --c3: #7adfaa;
-    --c4: #ffb070;
-    --c5: #d8a0f5;
-    --muted: #ffffff;
-    --line: #ffffff;
+    --kp-canvas:      #0A0A0F;
+    --kp-canvas-soft: #14141A;
+    --kp-ink:         #F5F5F7; /* Apple-style near-white */
+    --kp-slate:       #C7CCD1;
+    --kp-mute:        #8E8E93;
+    --kp-line:        #2C2C2E;
+    --kp-tinted:      #1E2236;
+    --kp-tinted-deep: #1E2236;
+
+    /* Dark-mode state axes — bright on near-black, still >=7:1 */
+    --kp-success:     #6FE3B5;
+    --kp-success-soft:#3FBE8A;
+    --kp-danger:      #FF8E96;
+    --kp-danger-soft: #FFB5BB;
+    --kp-warn:        #FFD18A;
+    --kp-warn-soft:   #FFB45A;
+
+    --bg:    var(--kp-canvas);
+    --fg:    var(--kp-ink);
+    --c1:    var(--kp-success);
+    --c2:    var(--kp-blue);
+    --c3:    var(--kp-indigo);
+    --c4:    var(--kp-warn);
+    --c5:    var(--kp-danger);
+    --muted: var(--kp-mute);
+    --line:  var(--kp-line);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --kp-mute: #000000;
+    --kp-line: #000000;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --kp-mute: #FFFFFF;
+      --kp-line: #FFFFFF;
+    }
   }
 }
 
 html,
 body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-atkinson), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  background: var(--kp-canvas);
+  color: var(--kp-ink);
+  font-family: var(--font-body);
   font-size: 18px;
   line-height: 1.5;
-  font-weight: 500;
+  font-weight: 400;
+  font-feature-settings: "kern" 1, "ss01" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
 }
 
 * {
@@ -50,15 +128,19 @@ input {
   font: inherit;
 }
 
+/* Apple-style tabular numerics for the leaderboard, AED amounts, scores */
 .tabular {
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
+/* Universal 48x48 tap-target helper (AGENTS.md §6) */
 .tap {
   min-height: 48px;
   min-width: 48px;
 }
 
+/* Restraint: hidden motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

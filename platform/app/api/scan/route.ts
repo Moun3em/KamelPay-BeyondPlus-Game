@@ -4,6 +4,7 @@ import { executeMemoryScan } from "@/lib/scan";
 import { selectStoreKind } from "@/lib/store.interface";
 import { getDevice } from "@/lib/store";
 import { executeScanPg, getDevicePg, MutationError } from "@/lib/store.pg";
+import { friendlyError } from "@/lib/error-response";
 import type { CardAction } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -50,6 +51,6 @@ export async function POST(req: Request) {
     if (error instanceof AuthError || error instanceof MutationError) {
       return NextResponse.json({ ok: false, error: error.message }, { status: error.status });
     }
-    throw error;
+    return friendlyError("[api/scan]", error, "Could not process scan");
   }
 }

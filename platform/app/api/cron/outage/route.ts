@@ -3,6 +3,7 @@ import { AuthError, requireServerTick } from "@/lib/auth";
 import { abortableSleep, runOutageCron, tickOutagesOnce } from "@/lib/outage.catchup";
 import { publishGlobal } from "@/lib/sse";
 import { advanceTimelineOnce } from "@/lib/timeline";
+import { friendlyError } from "@/lib/error-response";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,6 @@ export async function GET(req: Request) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    throw error;
+    return friendlyError("[api/cron/outage]", error, "Cron tick failed");
   }
 }

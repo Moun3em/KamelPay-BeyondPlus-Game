@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { consoleTokenFromRequest, requireConsoleToken, AuthError } from "@/lib/auth";
+import { friendlyError } from "@/lib/error-response";
 import {
   appendEvent,
   beginMemoryOperation,
@@ -116,6 +117,6 @@ export async function POST(req: Request) {
     if (error instanceof AuthError || error instanceof MutationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    throw error;
+    return friendlyError("[api/trade]", error, "Trade failed");
   }
 }

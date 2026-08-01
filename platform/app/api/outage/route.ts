@@ -5,6 +5,7 @@ import {
   authenticateDeviceToken,
   deviceTokenFromRequest,
 } from "@/lib/auth";
+import { friendlyError } from "@/lib/error-response";
 import {
   getDevice,
 } from "@/lib/store";
@@ -69,6 +70,6 @@ export async function POST(req: Request) {
     if (error instanceof AuthError || error instanceof MutationError || error instanceof MemoryOutageError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    throw error;
+    return friendlyError("[api/outage]", error, "Outage action failed");
   }
 }
