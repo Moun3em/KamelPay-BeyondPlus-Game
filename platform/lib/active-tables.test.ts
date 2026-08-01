@@ -67,10 +67,11 @@ describe("active table count (3–10)", () => {
     expect(replay.status).toBe(200);
     expect((await replay.json()).replay).toBe(true);
 
-    const audit = listEvents(0).some(
-      (e) => e.kind === "FACILITATOR_ACTION" && (e.meta as { action?: string })?.action === "set_active_tables",
+    const withValue = listEvents(0).filter(
+      (e) => e.kind === "FACILITATOR_ACTION" && (e.meta as { activeTables?: number })?.activeTables === 6,
     );
-    expect(audit).toBe(true);
+    expect(withValue).toHaveLength(1);
+    expect((withValue[0].meta as { reason?: string }).reason).toBe("fewer guests");
   });
 
   it("rejects joins to tables beyond the active count with a friendly error", async () => {
