@@ -135,6 +135,14 @@ export async function POST(req: Request) {
     }
     case "set_active_tables": {
       setGameState({ activeTables: command.activeTables });
+      appendEvent({
+        table_no: 0,
+        actor_role: "FACILITATOR",
+        kind: "FACILITATOR_ACTION",
+        delta_aed: 0,
+        idempotency_key: `${operationKey}:active`,
+        meta: { action: "set_active_tables", activeTables: command.activeTables, reason: command.reason },
+      });
       await publishGlobal({ activeTables: command.activeTables });
       return NextResponse.json({ ok: true, activeTables: command.activeTables });
     }

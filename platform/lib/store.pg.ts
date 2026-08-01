@@ -764,13 +764,16 @@ export async function streamSnapshotPg() {
   ]);
   const gameRow = gameResult.rows[0] as Row | undefined;
   if (!gameRow) throw new MutationError("Game state unavailable", 503);
+  const active = Number(gameRow.active_tables ?? 10);
   return {
     game: game(gameRow),
-    teams: teamsResult.rows.map((row) => ({
-      table_no: Number(row.table_no),
-      capital_aed: Number(row.capital_aed),
-      badges: (row.badges as string[] | null) ?? [],
-    })),
+    teams: teamsResult.rows
+      .filter((row) => Number(row.table_no) <= active)
+      .map((row) => ({
+        table_no: Number(row.table_no),
+        capital_aed: Number(row.capital_aed),
+        badges: (row.badges as string[] | null) ?? [],
+      })),
     recent: eventsResult.rows.map((row) => ({
       table_no: Number(row.table_no),
       kind: String(row.kind),
