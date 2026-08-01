@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "seed": "tsx scripts/seed.ts",
     "seed:dry": "tsx scripts/seed.ts --dry",
-    "loadtest": "tsx scripts/loadtest.ts"
+    "loadtest": "tsx scripts/loadtest.ts",
+    "loadtest:local": "tsx scripts/loadtest-local.ts"
   },
   "dependencies": {
     "@vercel/kv": "^3.0.0",

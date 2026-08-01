@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WhyModal, usePlayerState } from "@/components/ui";
 import type { TeachingModal } from "@/lib/types";
@@ -12,6 +12,7 @@ export default function CioPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [modal, setModal] = useState<TeachingModal | null>(null);
+  const solveKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (error === "session") router.replace("/join");
@@ -35,18 +36,26 @@ export default function CioPage() {
 
   async function submit() {
     if (!session) return;
-    const res = await fetch("/api/outage", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "solve",
-        deviceId: session.deviceId,
-        answer,
-      }),
-    });
-    const json = await res.json();
+    solveKey.current ??= crypto.randomUUID();
+    let json: Record<string, unknown>;
+    try {
+      const res = await fetch("/api/outage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "solve",
+          answer,
+          idempotencyKey: solveKey.current,
+        }),
+      });
+      json = await res.json() as Record<string, unknown>;
+      solveKey.current = null;
+    } catch {
+      setMsg("Network interrupted. Tap Restore systems to retry safely.");
+      return;
+    }
     if (json.ok) {
-      setModal(json.modal);
+      setModal(json.modal as TeachingModal);
       setMsg(null);
       return;
     }
@@ -74,7 +83,7 @@ export default function CioPage() {
           Encrypted system log — restore five-corner routing for a supplier-issued
           invoice.
         </p>
-        <pre className="overflow-auto rounded border-2 border-white/40 bg-black/30 p-3 text-sm leading-relaxed">
+        <pre className="overflow-auto rounded border-2 border-white/40 bg-black/30 p-3 text-lg leading-relaxed">
 {`C? → C? → C? → C? → C?
 supplier ASP · buyer ASP · FTA
 sequence required`}

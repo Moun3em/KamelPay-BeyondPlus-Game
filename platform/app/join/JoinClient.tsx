@@ -72,20 +72,30 @@ export default function JoinPage() {
   const keypad = useMemo(() => "ACDEFGHJKLMNPQRTUVWXY34679".split(""), []);
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-lg flex-col gap-6 px-4 py-8">
-      <header>
-        <p className="text-sm font-semibold text-[var(--c3)]">Join</p>
-        <h1 className="text-3xl font-bold">
-          TABLE {String(tableNo).padStart(2, "0")}
-        </h1>
+    <main className="mx-auto flex min-h-dvh max-w-lg flex-col gap-8 px-5 py-10">
+      <header className="flex items-baseline justify-between">
+        <p className="text-lg font-semibold tracking-[0.18em] text-[var(--c3)]">
+          JOIN
+        </p>
+        <button
+          type="button"
+          className="tap text-lg font-semibold text-[var(--kp-mute)]"
+          onClick={() => router.push("/")}
+        >
+          Cancel
+        </button>
       </header>
 
+      <h1 className="text-5xl font-bold leading-none tracking-tight tabular">
+        TABLE {String(tableNo).padStart(2, "0")}
+      </h1>
+
       {step === "pin" ? (
-        <section className="flex flex-col gap-4">
-          <label className="text-base font-semibold">
-            Table number
+        <section className="flex flex-col gap-6">
+          <label className="flex flex-col gap-2">
+            <span className="text-lg font-semibold">Table number</span>
             <input
-              className="tap mt-2 w-full rounded-lg border-2 border-[var(--fg)] bg-transparent px-3 text-center text-2xl tabular"
+              className="tap rounded-xl border-2 border-[var(--kp-line)] bg-white px-4 py-4 text-center text-2xl font-semibold tabular focus:border-[var(--kp-blue)] focus:outline-none"
               type="number"
               min={1}
               max={12}
@@ -93,69 +103,83 @@ export default function JoinPage() {
               onChange={(e) => setTableNo(Number(e.target.value))}
             />
           </label>
-          <p className="text-center text-3xl font-bold tracking-[0.35em] tabular">
+
+          <p
+            aria-label={`PIN entry: ${pin.length} of 6 characters`}
+            className="text-center text-4xl font-bold tracking-[0.4em] tabular text-[var(--kp-ink)]"
+          >
             {pin.padEnd(6, "·")}
           </p>
+
           <div className="grid grid-cols-6 gap-2">
             {keypad.map((ch) => (
               <button
                 key={ch}
                 type="button"
-                className="tap rounded-lg border-2 border-[var(--fg)] font-semibold"
+                className="tap rounded-xl border-2 border-[var(--kp-line)] bg-white text-xl font-semibold text-[var(--kp-ink)] transition-colors hover:border-[var(--kp-ink)] active:bg-[var(--kp-tinted)]"
                 onClick={() => setPin((p) => (p.length < 6 ? p + ch : p))}
               >
                 {ch}
               </button>
             ))}
           </div>
+
           <div className="flex gap-3">
             <button
               type="button"
-              className="tap flex-1 rounded-lg border-2 border-[var(--fg)] font-semibold"
+              className="tap flex-1 rounded-xl border-2 border-[var(--kp-line)] bg-white text-lg font-semibold text-[var(--kp-ink)] transition-colors hover:border-[var(--kp-ink)]"
               onClick={() => setPin((p) => p.slice(0, -1))}
             >
               Delete
             </button>
             <button
               type="button"
-              className="tap flex-1 rounded-lg border-2 border-[var(--fg)] bg-[var(--fg)] font-semibold text-[var(--bg)]"
+              className="tap flex-1 rounded-xl bg-[var(--kp-blue)] text-lg font-semibold text-white transition-colors hover:bg-[var(--kp-blue-deep)] disabled:opacity-40"
               onClick={() => void submitPin()}
+              disabled={!pinValid}
             >
               Continue
             </button>
           </div>
         </section>
       ) : (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-bold">Claim your role</h2>
-          <p className="text-[var(--muted)]">
+        <section className="flex flex-col gap-4">
+          <h2 className="text-2xl font-bold">Claim your role</h2>
+          <p className="text-lg text-[var(--kp-slate)]">
             CFO, Tax and CIO are required. One dead phone? Claim All roles.
           </p>
-          {ROLES.map((role) => {
-            const isTaken = taken.includes(role);
-            return (
-              <button
-                key={role}
-                type="button"
-                disabled={isTaken || busy}
-                onClick={() => void claim(role)}
-                className="tap flex min-h-16 items-center justify-between rounded-lg border-2 border-[var(--fg)] px-4 text-left font-semibold disabled:opacity-40"
-              >
-                <span className="flex items-center gap-3">
-                  <span aria-hidden>{isTaken ? "○" : "●"}</span>
-                  {ROLE_LABELS[role]}
-                </span>
-                <span className="text-sm">
-                  {isTaken ? "taken by another device" : "claim"}
-                </span>
-              </button>
-            );
-          })}
+          <div className="flex flex-col gap-3">
+            {ROLES.map((role) => {
+              const isTaken = taken.includes(role);
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  disabled={isTaken || busy}
+                  onClick={() => void claim(role)}
+                  className="tap flex min-h-16 items-center justify-between rounded-xl border-2 border-[var(--kp-line)] bg-white px-4 text-left text-lg font-semibold text-[var(--kp-ink)] transition-colors hover:border-[var(--kp-ink)] disabled:opacity-40"
+                >
+                  <span className="flex items-center gap-3">
+                    <span aria-hidden className="text-2xl leading-none">
+                      {isTaken ? "○" : "●"}
+                    </span>
+                    {ROLE_LABELS[role]}
+                  </span>
+                  <span className="text-base text-[var(--kp-mute)]">
+                    {isTaken ? "taken by another device" : "claim"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </section>
       )}
 
       {error ? (
-        <p role="alert" className="rounded-lg border-2 border-[var(--c1)] p-3">
+        <p
+          role="alert"
+          className="rounded-xl border-2 border-[var(--c5)] bg-[var(--c5)]/10 p-4 text-lg text-[var(--kp-ink)]"
+        >
           <span className="font-bold">Error — </span>
           {error}
         </p>
