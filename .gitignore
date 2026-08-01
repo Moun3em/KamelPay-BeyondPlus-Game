@@ -19,3 +19,8 @@ platform/.pnpm-debug.log*
 
 node_modules/
 .next/
+.vercel
+.env*
+
+# Local Hermes session data
+.hermes/
