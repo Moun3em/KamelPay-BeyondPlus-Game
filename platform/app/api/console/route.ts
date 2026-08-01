@@ -10,6 +10,7 @@ import { advanceMemoryTimelineUnlocked, isForwardPhaseTransition, manualPhaseClo
 import { selectStoreKind } from "@/lib/store.interface";
 import { executeFacilitatorPg, executeScanPg, MutationError } from "@/lib/store.pg";
 import { executeMemoryScan } from "@/lib/scan";
+import { consoleDeviceId } from "@/lib/console-scan";
 import { sql } from "@/lib/db";
 import {
   appendEvent,
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
       const scanRoles = ["ALL_ROLES", "TAX"] as const;
       let session: { deviceId: string; tableNo: number; role: Role } | null = null;
       for (const role of scanRoles) {
-        const deviceId = `00000000-0000-4000-8000-${String(command.tableNo).padStart(12, "0")}-${role === "TAX" ? "A" : "0"}`;
+        const deviceId = consoleDeviceId(command.tableNo, role);
         try {
           if (selectStoreKind() === "postgres") {
             await sql.query(
@@ -88,9 +89,9 @@ export async function POST(req: Request) {
           session = { deviceId, tableNo: command.tableNo, role };
           break;
         } catch (e) {
-          // pg UNIQUE(table_no, role) violation — try the next role
-          if (e instanceof MutationError) throw e;
-          continue;
+          // Only a pg UNIQUE(table_no, role) violation means "role taken";
+          // anything else (connection, serialization, bad input) must surface.
+          if ((e as { code?: string }).code !== "23505") throw e;
         }
       }
       if (!session) {

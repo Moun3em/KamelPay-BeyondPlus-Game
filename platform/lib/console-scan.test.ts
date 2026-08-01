@@ -2,6 +2,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CONSOLE_COOKIE, consoleSessionCookieValue } from "./session";
 import { getTeam, listEvents, loadSeedIntoMemory, setGameState } from "./store";
 import { POST as consolePOST } from "../app/api/console/route";
+import { consoleDeviceId } from "./console-scan";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+describe("consoleDeviceId", () => {
+  it("always produces a valid canonical UUID (passes the reset_device regex)", () => {
+    for (const t of [1, 2, 10]) {
+      expect(consoleDeviceId(t, "ALL_ROLES"), `t${t} ALL_ROLES`).toMatch(UUID_RE);
+      expect(consoleDeviceId(t, "TAX"), `t${t} TAX`).toMatch(UUID_RE);
+    }
+  });
+
+  it("is deterministic and distinct per (table, role)", () => {
+    expect(consoleDeviceId(1, "ALL_ROLES")).toBe(consoleDeviceId(1, "ALL_ROLES"));
+    expect(consoleDeviceId(1, "TAX")).not.toBe(consoleDeviceId(1, "ALL_ROLES"));
+    expect(consoleDeviceId(2, "ALL_ROLES")).not.toBe(consoleDeviceId(1, "ALL_ROLES"));
+  });
+});
 
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "test");
