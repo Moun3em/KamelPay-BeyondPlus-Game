@@ -258,7 +258,7 @@ function ConsoleAuthed() {
             </tr>
           </thead>
           <tbody>
-            {activeTeams.map((t) => (
+            {teams.map((t) => (
               <tr
                 key={t.table_no}
                 className={`cursor-pointer border-b border-[var(--kp-line)]/50 transition-colors hover:bg-[var(--kp-canvas-soft)] ${
