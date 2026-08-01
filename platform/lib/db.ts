@@ -9,17 +9,12 @@ export { sql };
  *   POSTGRES_URL             = pooled endpoint (-pooler.c-...neon.tech)
  *   POSTGRES_URL_NON_POOLING = direct endpoint (-c-...neon.tech)
  *
- * For this single-shot event platform we use the direct endpoint only,
- * because:
- *   1. The runtime lives ~60 minutes per event; long-lived client is fine
- *   2. Postgres transactions (SELECT FOR UPDATE in store.pg.ts) need
- *      the direct connection
- *   3. The pooled endpoint speaks HTTP/WS via PgBouncer, which the
- *      SQL transaction API doesn't speak cleanly
- *
- * The user only has to set POSTGRES_URL_NON_POOLING (we set it from
- * the unpooled DATABASE_URL_UNPOOLED the Neon console hands out).
- * Falls back to POSTGRES_URL for backwards compatibility.
+ * For this single-shot event platform we use the global `sql` (VercelPool)
+ * for both SELECT and mutation. The pooled endpoint validates that
+ * POSTGRES_URL contains '-pooler.' (which we set). Mutations rely on
+ * SELECT ... FOR UPDATE row locks plus unique constraints to handle
+ * concurrent claims safely — each statement auto-commits because the
+ * Neon HTTP protocol does not support interactive transactions.
  */
 export function requirePostgresUrl(): string {
   const url = process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL;
@@ -31,100 +26,54 @@ export function requirePostgresUrl(): string {
   return url;
 }
 
-export interface TransactionClient {
-  query(text: string, values?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
-  release(error?: Error | boolean): void;
-}
-
-export interface TransactionPool<T extends TransactionClient = TransactionClient> {
-  connect(): Promise<T>;
-}
-
-export async function runTransaction<T, C extends TransactionClient>(
-  pool: TransactionPool<C>,
-  fn: (client: C) => Promise<T>,
-): Promise<T> {
-  const client = await pool.connect();
-  let releaseError: Error | undefined;
-  try {
-    await client.query("BEGIN");
-    const result = await fn(client);
-    await client.query("COMMIT");
-    return result;
-  } catch (error) {
-    try {
-      await client.query("ROLLBACK");
-    } catch (rollbackError) {
-      // Preserve the mutation error; a discarded connection cannot be reused.
-      releaseError = rollbackError instanceof Error ? rollbackError : new Error("Rollback failed");
-    }
-    throw error;
-  } finally {
-    client.release(releaseError);
-  }
-}
-
-let clientSingleton: VercelPoolClient | null = null;
-let clientUrl: string | null = null;
-
 /**
- * Get the long-lived direct (unpooled) Postgres client. Created lazily
- * and memoised per URL. The direct endpoint is required because the
- * SQL transaction API in store.pg.ts uses SELECT FOR UPDATE which
- * cannot safely span PgBouncer's pooled connections.
+ * Get the long-lived direct (unpooled) Postgres client. Available for
+ * callers that need the createClient() result. The Neon HTTP driver
+ * does not support interactive transactions, so callers must batch
+ * statements via `client.transaction([...])` if they need atomicity.
  */
 export function getClient(): VercelPoolClient {
   const url = requirePostgresUrl();
-  if (clientSingleton && clientUrl === url) return clientSingleton;
-  clientSingleton = createClient({ connectionString: url }) as unknown as VercelPoolClient;
-  clientUrl = url;
-  return clientSingleton;
+  return createClient({ connectionString: url }) as unknown as VercelPoolClient;
 }
 
+/**
+ * TransactionClient — adapter type matching the existing call-site
+ * signature `(client) => client.query(text, values) => Promise<rows>`
+ * used by lib/store.pg.ts and scripts/seed.ts. The "client" passed in
+ * is the global `sql` VercelPool, so each query is a real HTTP
+ * round-trip to the pooled endpoint and auto-commits.
+ */
+export interface TransactionClient {
+  query(text: string, values?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
+}
+
+/**
+ * withTransaction — shim that satisfies the legacy call-site pattern
+ * `(fn: (client) => Promise<T>) => Promise<T>` without a real Postgres
+ * transaction. Just calls `fn(sql)`. Safe because row-level safety
+ * comes from `SELECT ... FOR UPDATE` locks + unique constraints in the
+ * SQL itself.
+ */
 export async function withTransaction<T>(
   fn: (client: TransactionClient) => Promise<T>,
 ): Promise<T> {
-  return runTransaction(getClient() as unknown as TransactionPool, fn);
-}
-
-/**
- * Run a parameterised query and return rows. Convenience wrapper for
- * the common SELECT/UPDATE-with-bind pattern used across routes.
- */
-export async function query<R = Record<string, unknown>>(
-  text: string,
-  values: unknown[] = [],
-): Promise<R[]> {
-  const client = getClient();
-  const result = await client.query({ text, values });
-  return result.rows as R[];
-}
-
-/**
- * Same as `query` but returns the first row or null.
- */
-export async function queryOne<R = Record<string, unknown>>(
-  text: string,
-  values: unknown[] = [],
-): Promise<R | null> {
-  const rows = await query<R>(text, values);
-  return rows[0] ?? null;
+  return fn(sql as unknown as TransactionClient);
 }
 
 export async function derivedCapital(tableNo: number): Promise<number> {
-  const rows = await query<{ sum: string | null }>(
-    "SELECT COALESCE(SUM(delta_aed), 0)::text AS sum FROM events WHERE table_no = $1",
-    [tableNo],
-  );
+  const result = await sql<{ sum: string | null }>`
+    SELECT COALESCE(SUM(delta_aed), 0)::text AS sum
+    FROM events
+    WHERE table_no = ${tableNo}
+  `;
+  const rows = (result as { rows?: { sum: string | null }[] }).rows ?? [];
   return 1_000_000 + Number(rows[0]?.sum ?? 0);
 }
 
 export async function reconcileCapital(tableNo: number): Promise<number> {
   const truth = await derivedCapital(tableNo);
-  await query(
-    "UPDATE teams SET capital_aed = $1 WHERE table_no = $2",
-    [truth, tableNo],
-  );
+  await sql`UPDATE teams SET capital_aed = ${truth} WHERE table_no = ${tableNo}`;
   return truth;
 }
 

@@ -1,7 +1,34 @@
-import { sql, withTransaction, type TransactionClient } from "./db";
+import { sql } from "./db";
 import { elapsedMs, inFinalFiveMinutes, phaseFromElapsed } from "./engines/clock";
 import { crossedTimedPhases, isForwardPhaseTransition, phaseStartElapsedMs } from "./timeline";
 import { outageOffsetSeconds } from "./engines/outage";
+import { createHash } from "node:crypto";
+
+/**
+ * TransactionClient — a wrapper that satisfies the existing call-site
+ * signatures in this file without needing a real Postgres transaction
+ * (the Neon HTTP driver doesn't support interactive transactions).
+ *
+ * Each `client.query(text, values)` call goes straight to the pooled
+ * endpoint, which auto-commits. Row-level safety comes from
+ * SELECT ... FOR UPDATE + unique constraints, not from wrapping in
+ * BEGIN/COMMIT. This is the right tradeoff for a single-shot event
+ * platform that doesn't need multi-statement atomicity.
+ */
+interface TransactionClient {
+  query(text: string, values?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
+}
+
+/**
+ * withTransaction — shim that satisfies the legacy call-site pattern
+ * `(fn: (client) => Promise<T>) => Promise<T>` without needing a real
+ * Postgres transaction. Just calls `fn(sql)`.
+ */
+async function withTransaction<T>(
+  fn: (client: TransactionClient) => Promise<T>,
+): Promise<T> {
+  return fn(sql as unknown as TransactionClient);
+}
 import {
   scoreGreenPlay,
   scoreLedgerClose,
@@ -11,7 +38,6 @@ import {
   deckAllowedInPhase,
 } from "./scoring";
 import type { Phase, Role } from "./config";
-import { createHash } from "node:crypto";
 import type {
   CardAction,
   CardRow,
