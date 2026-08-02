@@ -29,14 +29,29 @@ export default function TaxScannerPage() {
       try {
         const { BrowserMultiFormatReader } = await import("@zxing/browser");
         const reader = new BrowserMultiFormatReader();
+
+        // 1) Request camera permission FIRST. Mobile browsers return an
+        //    empty (label-less) device list until the user grants access, so
+        //    enumerating before getUserMedia made the scanner report
+        //    "No camera found" without ever prompting. This call pops the
+        //    browser permission dialog and populates the device list.
+        const probe = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+
+        // 2) Now enumerate real devices and prefer the back/environment camera.
         const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const deviceId = devices[0]?.deviceId;
-        if (!deviceId || !videoRef.current) {
+        const back =
+          devices.find((d) => /back|rear|environment/i.test(d.label)) ??
+          devices[0];
+        probe.getTracks().forEach((t) => t.stop());
+
+        if (!back?.deviceId || !videoRef.current) {
           setCamError("No camera found — use Enter card ID.");
           return;
         }
         const controls = await reader.decodeFromVideoDevice(
-          deviceId,
+          back.deviceId,
           videoRef.current,
           (result) => {
             if (result && !cancelled) {
@@ -45,10 +60,17 @@ export default function TaxScannerPage() {
           },
         );
         controlsRef.current = controls;
-      } catch {
-        setCamError(
-          "Camera blocked or unavailable — use Enter card ID. (HTTPS required on phones.)",
-        );
+      } catch (err) {
+        const name = (err as DOMException | Error)?.name;
+        if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+          setCamError(
+            "Camera permission blocked — allow camera access for this site, or use Enter card ID.",
+          );
+        } else {
+          setCamError(
+            "Camera blocked or unavailable — use Enter card ID. (HTTPS required on phones.)",
+          );
+        }
       }
     }
     void startCam();
