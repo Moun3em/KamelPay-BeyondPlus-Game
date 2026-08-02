@@ -78,12 +78,13 @@ export function WhyModal({
   );
 }
 
-export function usePlayerState(pollMs = 5000) {
+export function usePlayerState(pollMs = 5000, scope?: string) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/state");
+    const url = scope ? `/api/state?scope=${encodeURIComponent(scope)}` : "/api/state";
+    const res = await fetch(url);
     if (res.status === 401) {
       setError("session");
       return;

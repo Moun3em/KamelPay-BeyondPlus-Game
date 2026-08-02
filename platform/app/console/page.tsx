@@ -71,7 +71,7 @@ export default function ConsolePage() {
 
 function ConsoleAuthed() {
   const router = useRouter();
-  const { data, refresh } = usePlayerState(2000);
+  const { data, refresh } = usePlayerState(2000, "console");
   const phase = String(data?.phase ?? "—");
   const remaining = Number(data?.remaining_ms ?? 0);
   const paused = Boolean(data?.paused);
