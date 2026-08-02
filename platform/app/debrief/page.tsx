@@ -45,7 +45,8 @@ export default function DebriefPage() {
           value={pin}
           onChange={(e) => setPin(e.target.value)}
           placeholder="Facilitator PIN"
-          inputMode="numeric"
+          autoCapitalize="none"
+          autoCorrect="off"
         />
         <button
           type="button"

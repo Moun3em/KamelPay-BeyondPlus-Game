@@ -26,8 +26,9 @@ export default function ConsolePage() {
         </div>
         <input
           type="password"
-          inputMode="numeric"
           autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
           className="tap rounded-xl border-2 border-[var(--kp-line)] bg-white px-4 text-2xl font-semibold tracking-widest focus:border-[var(--kp-blue)] focus:outline-none"
           value={pin}
           onChange={(e) => setPin(e.target.value)}
