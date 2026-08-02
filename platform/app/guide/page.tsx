@@ -189,6 +189,7 @@ export default function GuidePage() {
     "--kp-heat-deep": "#C45F00",
     "--kp-heat-soft": "#FFC98A",
     "--kp-line": "#D1DAE5",
+    "--kp-tinted": "#E4ECF6",
   } as React.CSSProperties;
   return (
     <main
