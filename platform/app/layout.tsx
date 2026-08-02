@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
-import { Atkinson_Hyperlegible, Inter } from "next/font/google";
+import { Outfit, Source_Sans_3, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const atkinson = Atkinson_Hyperlegible({
-  weight: ["400", "700"],
+const outfit = Outfit({
+  weight: ["500", "600", "700", "800"],
   subsets: ["latin"],
-  variable: "--font-atkinson",
+  variable: "--font-outfit",
 });
 
-const inter = Inter({
-  weight: ["500", "600", "700"],
+const source = Source_Sans_3({
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-source",
+});
+
+const plexMono = IBM_Plex_Mono({
+  weight: ["500", "600"],
+  subsets: ["latin"],
+  variable: "--font-mono-plex",
 });
 
 export const metadata: Metadata = {
@@ -24,7 +30,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${atkinson.variable} ${inter.variable} antialiased`}>
+      <body className={`${outfit.variable} ${source.variable} ${plexMono.variable} antialiased`}>
         {children}
       </body>
     </html>

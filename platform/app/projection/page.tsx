@@ -66,7 +66,7 @@ export default function ProjectionPage() {
   const ranked = [...teams].sort((a, b) => b.display_aed - a.display_aed);
 
   return (
-    <main className="relative min-h-dvh bg-gradient-to-br from-[var(--kp-ink)] to-[#0a0e1a] px-12 py-10 text-white">
+    <main className="relative min-h-dvh bg-gradient-to-br from-[var(--kp-ink)] to-[#071321] px-12 py-10 text-white">
       <div
         className={`absolute right-8 top-8 flex items-center gap-2 ${
           reconnect ? "text-[var(--kp-warn)]" : "text-[var(--kp-success)]"

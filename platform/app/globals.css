@@ -1,29 +1,33 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   KamelPay Design System
+   KamelPay Design System (v2 — presentation language)
    ----------------------------------------------------------------------------
-   Palette extracted from kamelpay.com (2026-07-31). The brand is dominated
-   by an indigo #5F59F7 with a slate-blue #0059F7 reserved for primary
-   CTAs. Typography pairs Raleway (display + headings) with Open Sans
-   (body), per kamelpay.com. Player-facing surfaces also need a finance-
-   friendly red/green axis per AGENTS.md §7 — colour is never the only
-   signal so we keep state colours WCAG AAA against their backgrounds
-   (>=7:1).
+   Palette lifted from the KamelPay-Present deck: navy #12305A (dominant),
+   signal blue #1A7AE5 (primary action), heat orange #F07A00 (accent /
+   numerals), ink #0A1628, paper #F4F7FB, mist #E4ECF6. Typography pairs
+   Outfit (display + headings) with Source Sans 3 (body). Player-facing
+   surfaces keep a finance-friendly red/green axis per AGENTS.md §7 —
+   colour is never the only signal so state colours stay WCAG AAA
+   (>=7:1) on their backgrounds.
    ============================================================================ */
 :root {
   /* Brand */
-  --kp-indigo:        #5F59F7; /* dominant, headings, links */
-  --kp-blue:          #0059F7; /* CTA, primary action */
-  --kp-blue-deep:     #0037ED; /* CTA pressed/hover */
-  --kp-ink:           #000D1E; /* dark sections, headings on light */
+  --kp-indigo:        #12305A; /* navy — dominant, headings, links */
+  --kp-blue:          #1A7AE5; /* signal — CTA, primary action (large text) */
+  --kp-blue-deep:     #0D5BB5; /* signal pressed/hover */
+  --kp-ink:           #0A1628; /* dark sections, headings on light */
   --kp-slate:         #364151; /* body text secondary */
-  --kp-mute:          #5A5A5A; /* tertiary text */
+  --kp-mute:          #42546B; /* tertiary text */
   --kp-line:          #D1DAE5; /* dividers, table borders */
   --kp-canvas:        #FFFFFF; /* page background */
-  --kp-canvas-soft:   #FBFBFB; /* card backgrounds */
-  --kp-tinted:        #E2ECFF; /* subtle blue-tinted surfaces */
-  --kp-tinted-deep:   #E1ECFF; /* alt subtle tint */
+  --kp-canvas-soft:   #F4F7FB; /* paper — card backgrounds */
+  --kp-tinted:        #E4ECF6; /* mist — subtle blue-tinted surfaces */
+  --kp-tinted-deep:   #DCE7F3; /* alt subtle tint */
+
+  /* Heat accent — numerals, badges on dark, decorative gradients */
+  --kp-heat:          #F07A00; /* accent (large/decorative only on light) */
+  --kp-heat-deep:     #C45F00; /* heat pressed/hover */
 
   /* Finance-state axis — colour is *never* the only signal (AGENTS.md §7),
      but the palette stays WCAG AAA on both #FFFFFF and #121212. */
@@ -42,15 +46,17 @@
   --c3:    var(--kp-indigo);
   --c4:    var(--kp-warn);
   --c5:    var(--kp-danger);
+  --heat:  var(--kp-heat);
   --muted: var(--kp-mute);
   --line:  var(--kp-line);
 
-  /* Type scale (Apple-style: tight numeric, generous spacing, system fallback) */
-  --font-display: "Raleway", -apple-system, BlinkMacSystemFont, "SF Pro Display",
-                  "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-body:    "Open Sans", -apple-system, BlinkMacSystemFont, "SF Pro Text",
-                  "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono:    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  /* Type scale (presentation language: Outfit display + Source Sans 3 body) */
+  --font-display: var(--font-outfit), "Outfit", -apple-system, BlinkMacSystemFont,
+                  "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body:    var(--font-source), "Source Sans 3", -apple-system, BlinkMacSystemFont,
+                  "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono:    var(--font-mono-plex), "IBM Plex Mono", ui-monospace, SFMono-Regular,
+                  "SF Mono", Menlo, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {

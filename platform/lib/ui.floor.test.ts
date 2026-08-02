@@ -25,6 +25,7 @@ const ARBITRARY_UNDERSIZED_RE = /font-size:\s*(\d{1,2})px|className=.*?text-\[(\
 const ALLOWED_UNDERSIZED_FILES: Record<string, string> = {
   "debrief/page.tsx": "projection / debrief displays tiny meta text below the 18px body line — these are sub-text timestamps, not body content",
   "console/page.tsx": "facilitator table rows show table metadata in a denser layout; the primary content rows use text-base",
+  "guide/page.tsx": "public documentation page — mono eyebrows and small notes are metadata, not player-facing body content (body copy is text-base+)",
 };
 
 function listPageFiles(dir: string): string[] {
