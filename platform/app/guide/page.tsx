@@ -174,8 +174,27 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 export default function GuidePage() {
+  // The guide is a documentation page: lock it to the light palette so it
+  // renders identically under any OS theme (the dark-mode block re-themes
+  // --kp-slate/--kp-mute/--kp-canvas-soft, which would break white cards).
+  const lightScope = {
+    colorScheme: "light",
+    "--kp-canvas-soft": "#F4F7FB",
+    "--kp-slate": "#364151",
+    "--kp-mute": "#42546B",
+    "--kp-indigo": "#12305A",
+    "--kp-blue": "#1A7AE5",
+    "--kp-blue-deep": "#0D5BB5",
+    "--kp-heat": "#F07A00",
+    "--kp-heat-deep": "#C45F00",
+    "--kp-heat-soft": "#FFC98A",
+    "--kp-line": "#D1DAE5",
+  } as React.CSSProperties;
   return (
-    <main className="min-h-dvh bg-[var(--kp-canvas-soft)] [font-family:var(--font-body)]">
+    <main
+      className="min-h-dvh bg-[#F4F7FB] [font-family:var(--font-body)]"
+      style={lightScope}
+    >
       {/* HERO */}
       <section className="relative overflow-hidden bg-[linear-gradient(145deg,#071321_0%,#0F2748_45%,#12305A_100%)] px-6 py-20 text-white sm:px-10">
         <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(26,122,229,0.35),transparent_70%)]" />

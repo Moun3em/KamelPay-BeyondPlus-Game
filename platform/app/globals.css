@@ -71,13 +71,12 @@
     --kp-tinted:      #1E2236;
     --kp-tinted-deep: #1E2236;
 
-    /* Brand accents re-themed for dark surfaces (>=7:1 on #14141A) */
-    --kp-indigo:      #C3D3EF; /* light navy — headings on dark */
-    --kp-blue:        #7FB6F5; /* light signal — links/CTA on dark */
-    --kp-blue-deep:   #5AA0EC; /* signal hover on dark */
-    --kp-heat:        #FFB35C; /* light heat — accent on dark */
-    --kp-heat-deep:   #F79A35; /* heat hover on dark */
-    --kp-heat-soft:   #FFD9A8; /* pale heat — callout text on dark */
+    /* NOTE: brand tokens (--kp-indigo/--kp-blue/--kp-blue-deep/--kp-heat/
+       --kp-heat-deep) are intentionally NOT re-themed in dark mode. They
+       double as filled-button backgrounds and header fills with white text;
+       flipping them light made white-on-fill illegible (2.12:1). Surfaces
+       that need light-on-dark accents scope their own colors (e.g. the
+       /guide page locks itself to the light palette).
 
     /* Dark-mode state axes — bright on near-black, still >=7:1 */
     --kp-success:     #6FE3B5;
