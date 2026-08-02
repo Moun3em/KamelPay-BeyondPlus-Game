@@ -25,4 +25,13 @@ describe("guidanceFor", () => {
     expect(guidanceFor("B", false, false).steps.join(" ")).toContain("ASP trade validation");
     expect(guidanceFor("C", false, false).steps.join(" ")).toContain("Force-resolve");
   });
+
+  it("never returns undefined for unknown/loading phases (console crash regression)", () => {
+    for (const bogus of ["—", "", "LOADING", "BOGUS"] as const) {
+      const g = guidanceFor(bogus as never, false, false);
+      expect(g).toBeDefined();
+      expect(g.title.length).toBeGreaterThan(0);
+      expect(g.steps.length).toBeGreaterThan(0);
+    }
+  });
 });

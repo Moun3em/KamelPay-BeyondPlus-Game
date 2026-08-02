@@ -220,22 +220,24 @@ function ConsoleAuthed() {
         </div>
       </header>
 
-      {(() => {
-        const guide = guidanceFor(phase as Parameters<typeof guidanceFor>[0], eventMode, paused);
-        return (
-          <section className="mb-6 rounded-2xl border-2 border-[var(--kp-blue)] bg-[var(--kp-blue)]/10 p-5">
-            <h2 className="text-xl font-bold text-[var(--kp-ink)]">🎯 {guide.title}</h2>
-            <ol className="mt-2 grid gap-1 text-lg text-[var(--kp-ink)]">
-              {guide.steps.map((s, i) => (
-                <li key={s} className="flex gap-2">
-                  <span className="font-bold tabular text-[var(--kp-blue)]">{i + 1}.</span>
-                  <span>{s}</span>
-                </li>
-              ))}
-            </ol>
-          </section>
-        );
-      })()}
+      {data ? (
+        (() => {
+          const guide = guidanceFor(phase as Parameters<typeof guidanceFor>[0], eventMode, paused);
+          return (
+            <section className="mb-6 rounded-2xl border-2 border-[var(--kp-blue)] bg-[var(--kp-blue)]/10 p-5">
+              <h2 className="text-xl font-bold text-[var(--kp-ink)]">🎯 {guide.title}</h2>
+              <ol className="mt-2 grid gap-1 text-lg text-[var(--kp-ink)]">
+                {guide.steps.map((s, i) => (
+                  <li key={s} className="flex gap-2">
+                    <span className="font-bold tabular text-[var(--kp-blue)]">{i + 1}.</span>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          );
+        })()
+      ) : null}
 
       <section className="mb-6 rounded-2xl border border-[var(--kp-line)] bg-white p-4">
         <label className="flex flex-col gap-2">

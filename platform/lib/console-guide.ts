@@ -81,5 +81,12 @@ export function guidanceFor(phase: Phase, eventMode: boolean, paused: boolean): 
           "Reset game (wipe all progress) starts a fresh run.",
         ],
       };
+    default:
+      // Unknown/loading phase (e.g. first paint before state arrives) — never
+      // return undefined; a console that crashes on load helps no one.
+      return {
+        title: "Loading…",
+        steps: ["Waiting for the game state. This clears in a second."],
+      };
   }
 }
