@@ -140,7 +140,7 @@ PRACTICE_COPY = {
     "TUTORIAL": ("PRACTICE INVOICE — SCAN ME FIRST", "Tutorial card · scan to start the practice round"),
 }
 
-BAND = {"RED": "#D64550", "GREEN": "#2E8B57", "BLUE": "#0059F7", "PRACTICE": "#8A94A6"}
+BAND = {"RED": "#F07A00", "GREEN": "#1E8E5A", "BLUE": "#1A7AE5", "PRACTICE": "#8A94A6"}
 LABEL = {"RED": "INVOICE", "GREEN": "CONTROL", "BLUE": "ALLIANCE", "PRACTICE": "PRACTICE"}
 
 rows = []
