@@ -28,6 +28,7 @@
   /* Heat accent — numerals, badges on dark, decorative gradients */
   --kp-heat:          #F07A00; /* accent (large/decorative only on light) */
   --kp-heat-deep:     #C45F00; /* heat pressed/hover */
+  --kp-heat-soft:     #FFC98A; /* pale heat — callout text on dark */
 
   /* Finance-state axis — colour is *never* the only signal (AGENTS.md §7),
      but the palette stays WCAG AAA on both #FFFFFF and #121212. */
@@ -69,6 +70,14 @@
     --kp-line:        #2C2C2E;
     --kp-tinted:      #1E2236;
     --kp-tinted-deep: #1E2236;
+
+    /* Brand accents re-themed for dark surfaces (>=7:1 on #14141A) */
+    --kp-indigo:      #C3D3EF; /* light navy — headings on dark */
+    --kp-blue:        #7FB6F5; /* light signal — links/CTA on dark */
+    --kp-blue-deep:   #5AA0EC; /* signal hover on dark */
+    --kp-heat:        #FFB35C; /* light heat — accent on dark */
+    --kp-heat-deep:   #F79A35; /* heat hover on dark */
+    --kp-heat-soft:   #FFD9A8; /* pale heat — callout text on dark */
 
     /* Dark-mode state axes — bright on near-black, still >=7:1 */
     --kp-success:     #6FE3B5;

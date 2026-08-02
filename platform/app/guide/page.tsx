@@ -52,7 +52,7 @@ const phases = [
   {
     n: "06",
     name: "DEBRIEF",
-    time: "5 min",
+    time: "5+ min",
     what: "The room's own data tells the story: total fines, the most-missed trap, the GRN-04 comparison.",
     act: "Facilitator: open the Debrief screen. The line: 'You just did, under pressure, what a compliant e-invoicing pipeline does every day: read, decide, transmit, verify.'",
   },
@@ -194,7 +194,7 @@ export default function GuidePage() {
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             {[
-              ["~90 min", "Full session incl. debrief"],
+              ["~80 min", "Full session incl. debrief"],
               ["3–10 tables", "5 roles per company"],
               ["BYO phone", "No app, no install"],
             ].map(([k, v]) => (
@@ -207,7 +207,7 @@ export default function GuidePage() {
           <div className="mt-8 rounded-2xl border border-[var(--kp-heat)]/40 bg-[var(--kp-heat)]/10 px-6 py-5">
             <p className="text-base font-semibold text-white">
               The golden rule:{" "}
-              <span className="text-[#FFC98A]">valid and invalid cards look identical.</span>{" "}
+              <span className="text-[var(--kp-heat-soft)]">valid and invalid cards look identical.</span>{" "}
               No colour, no badge, no layout tells you the answer. The only way to decide is to
               read the invoice.
             </p>
