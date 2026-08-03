@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatClock } from "@/lib/engines/clock";
 import { FiveCorners } from "@/components/five-corners";
+import { CyberBackdrop } from "@/components/cyber-backdrop";
 
 type TeamRow = {
   table_no: number;
@@ -80,55 +81,64 @@ export default function ProjectionPage() {
   const ranked = [...teams].sort((a, b) => b.display_aed - a.display_aed);
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-gradient-to-br from-[var(--kp-ink)] via-[#0A1B33] to-[#071321] px-12 py-10 text-white">
-      {/* Ambient constellation — pulses once per scored scan */}
+    <main className="relative min-h-dvh overflow-hidden bg-[#050A14] px-12 py-10 text-white">
+      {/* Futuristic ambient layer */}
+      <CyberBackdrop />
+
+      {/* Glowing constellation — pulses once per scored scan */}
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         <FiveCorners
           pulseKey={pulseKey}
-          className="absolute left-1/2 top-1/2 h-[150vmin] w-[150vmin] -translate-x-1/2 -translate-y-1/2 opacity-35"
+          className="absolute left-1/2 top-1/2 h-[150vmin] w-[150vmin] -translate-x-1/2 -translate-y-1/2 opacity-50"
         />
       </div>
+
+      {/* Faint scan sweep */}
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_10%,transparent_45%,rgba(7,19,33,0.85)_100%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-transparent via-white/[0.05] to-transparent kp-scan-line"
         aria-hidden="true"
       />
 
       <div className="relative z-10 flex min-h-[calc(100dvh-5rem)] flex-col">
         <div
-          className={`absolute right-8 top-8 flex items-center gap-2 ${
+          className={`kp-glass absolute right-8 top-8 flex items-center gap-2 rounded-full px-4 py-2 ${
             reconnect ? "text-[var(--kp-warn)]" : "text-[var(--kp-success)]"
           }`}
         >
           <span
             className={`h-3 w-3 rounded-full ${
-              reconnect ? "bg-[var(--kp-warn)]" : "bg-[var(--kp-success)] kp-live"
+              reconnect
+                ? "bg-[var(--kp-warn)]"
+                : "bg-[var(--kp-success)] kp-live"
             }`}
             title={reconnect ? "Reconnecting" : "Live"}
             aria-label={reconnect ? "Reconnecting" : "Live"}
           />
-          <span className="text-lg font-semibold tracking-wide">
+          <span className="font-mono text-lg font-semibold tracking-wide">
             {reconnect ? "RECONNECTING" : "LIVE"}
           </span>
         </div>
         <header className="mb-10 flex items-start justify-between">
           <div>
-            <p className="text-lg font-semibold tracking-[0.18em] text-[var(--kp-heat-soft)]">
+            <p className="font-mono text-lg font-semibold tracking-[0.22em] text-[var(--kp-heat-soft)]">
               FIVE-CORNER COMPLIANCE
             </p>
             <h1 className="mt-2 text-5xl font-bold tracking-tight">
               Live leaderboard
             </h1>
-            <p className="mt-2 text-2xl text-white/70">
-              Phase{" "}
+            <p className="mt-3 flex items-center gap-3 text-2xl text-white/70">
+              <span className="font-mono text-base tracking-[0.18em]">
+                PHASE
+              </span>
               <span
                 key={phase}
-                className="kp-rise inline-block font-bold text-white"
+                className="kp-rise kp-glass inline-block rounded-full px-4 py-1 font-bold text-white"
               >
                 {phase}
               </span>
             </p>
           </div>
-          <p className="font-mono text-8xl font-bold tabular tracking-tight">
+          <p className="font-mono text-8xl font-bold tabular tracking-tight drop-shadow-[0_0_24px_rgba(26,122,229,0.5)]">
             {clock}
           </p>
         </header>
@@ -146,10 +156,10 @@ export default function ProjectionPage() {
           {ranked.map((t, idx) => (
             <li
               key={t.table_no}
-              className={`relative grid grid-cols-[80px_1fr_320px_1fr] items-center gap-4 rounded-2xl border px-6 py-4 text-2xl transition-colors hover:bg-white/10 ${
+              className={`relative grid grid-cols-[80px_1fr_320px_1fr] items-center gap-4 rounded-2xl px-6 py-4 text-2xl transition-colors hover:bg-white/10 ${
                 idx < 3
-                  ? "kp-shimmer-wrap border-white/15 bg-white/[0.07]"
-                  : "border-white/10 bg-white/[0.04]"
+                  ? "kp-shimmer-wrap border border-[var(--kp-heat)]/30 bg-white/[0.06]"
+                  : "kp-glass"
               }`}
             >
               {idx < 3 ? <span className="kp-shimmer" aria-hidden="true" /> : null}
@@ -175,7 +185,7 @@ export default function ProjectionPage() {
           ))}
         </ol>
 
-        <footer className="mt-12 flex flex-wrap gap-x-6 gap-y-2 text-lg text-white/70">
+        <footer className="mt-12 flex flex-wrap gap-x-6 gap-y-2 font-mono text-lg text-white/60">
           {recent.slice(0, 6).map((r, i) => (
             <span key={i} className="tabular">
               <span className="font-bold text-white">

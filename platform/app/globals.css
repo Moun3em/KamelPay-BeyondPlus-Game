@@ -243,3 +243,80 @@ html.motion-paused *::after {
   animation-play-state: paused !important;
   transition: none !important;
 }
+
+/* ============================================================================
+   Futuristic command-center layer (Phase 2)
+   ----------------------------------------------------------------------------
+   Dark HUD language: cyber grid, glow orbs, data-flow edges, glass panels.
+   Still transform/opacity-only where it moves, still dies under
+   prefers-reduced-motion (global block above) and the motion-paused guard.
+   ============================================================================ */
+
+/* Cyber grid backdrop */
+.kp-cyber-grid {
+  background-image:
+    linear-gradient(rgba(26, 122, 229, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 122, 229, 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 75% 65% at 50% 40%,
+    black 25%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    ellipse 75% 65% at 50% 40%,
+    black 25%,
+    transparent 78%
+  );
+}
+
+/* Glow orbs (slow breathing) */
+@keyframes kp-glow-pulse {
+  0%,
+  100% { opacity: 0.45; }
+  50% { opacity: 0.95; }
+}
+.kp-glow-pulse {
+  animation: kp-glow-pulse 4.5s ease-in-out infinite;
+}
+
+/* Data-flow edges on the routing diagram */
+@keyframes kp-flow {
+  to { stroke-dashoffset: -28; }
+}
+.kp-edge-flow {
+  stroke-dasharray: 5 7;
+  animation: kp-flow 1.3s linear infinite;
+}
+
+/* Node glow */
+.kp-node-glow {
+  filter: drop-shadow(0 0 10px currentColor);
+}
+
+/* Floating particles / ambient dots */
+@keyframes kp-float {
+  0%,
+  100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(8px, -14px, 0); }
+}
+.kp-float {
+  animation: kp-float 9s ease-in-out infinite;
+}
+
+/* Glass panel */
+.kp-glass {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Faint scan sweep (projection) */
+@keyframes kp-scan {
+  0% { transform: translateY(-1400%); }
+  100% { transform: translateY(1400%); }
+}
+.kp-scan-line {
+  animation: kp-scan 9s linear infinite;
+}

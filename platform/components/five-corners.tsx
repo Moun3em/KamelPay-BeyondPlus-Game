@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 /**
- * FiveCorners — the KamelPay routing constellation.
+ * FiveCorners v2 — the KamelPay routing constellation, futuristic skin.
  *
- * The five-corner route rendered as an ambient SVG: C1 SUPPLIER (red) →
+ * The five-corner route as a glowing data network: C1 SUPPLIER (red) →
  * C3 SUPPLIER ASP (green) → C5 FTA (violet) → C4 BUYER ASP (orange) →
- * C2 BUYER (blue) → back to C1. The same diagram that lives on the printed
- * mats and reference sheets — the platform and the physical table speak one
- * visual language.
+ * C2 BUYER (blue) → back to C1. Animated dashes flow along the ring
+ * (data travelling the route — the game's core metaphor).
  *
  * Motion is decorative only (aria-hidden). Slow drift via CSS
  * (transform-only), one-shot pulse via SMIL when `pulseKey` changes.
@@ -23,6 +22,14 @@ const NODES = [
   { id: "C5", label: "FTA", x: 650, y: 250, color: "#8B5CF6" },
   { id: "C4", label: "BUYER ASP", x: 420, y: 395, color: "#F07A00" },
   { id: "C2", label: "BUYER", x: 150, y: 385, color: "#1A7AE5" },
+];
+
+const EDGES = [
+  "M140,130 L400,100",
+  "M400,100 L650,250",
+  "M650,250 L420,395",
+  "M420,395 L150,385",
+  "M150,385 L140,130",
 ];
 
 const RING_PATH = "M140,130 L400,100 L650,250 L420,395 L150,385 Z";
@@ -70,30 +77,51 @@ export function FiveCorners({
           markerHeight="6"
           orient="auto-start-reverse"
         >
-          <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,255,255,0.30)" />
+          <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,255,255,0.35)" />
         </marker>
       </defs>
 
       <g className={drifting && !reduced ? "kp-drift" : undefined}>
-        {/* Ring edges */}
+        {/* Ring: dim base */}
+        <g stroke="rgba(255,255,255,0.10)" strokeWidth="2" fill="none">
+          {EDGES.map((d) => (
+            <path key={d} d={d} />
+          ))}
+        </g>
+        {/* Ring: animated data flow (futuristic signature) */}
         <g
-          stroke="rgba(255,255,255,0.28)"
+          stroke="rgba(140,190,255,0.55)"
           strokeWidth="2"
           fill="none"
           markerEnd={`url(#${arrowId})`}
+          className={reduced ? undefined : "kp-edge-flow"}
         >
-          <path d="M140,130 L400,100" />
-          <path d="M400,100 L650,250" />
-          <path d="M650,250 L420,395" />
-          <path d="M420,395 L150,385" />
-          <path d="M150,385 L140,130" />
+          {EDGES.map((d) => (
+            <path key={d} d={d} />
+          ))}
         </g>
 
-        {/* Nodes */}
+        {/* Nodes: glow + label */}
         {NODES.map((n) => (
           <g key={n.id}>
-            <circle cx={n.x} cy={n.y} r={46} fill={n.color} opacity={0.12} />
-            <circle cx={n.x} cy={n.y} r={34} fill={n.color} />
+            <circle cx={n.x} cy={n.y} r={46} fill={n.color} opacity={0.10} />
+            <circle
+              cx={n.x}
+              cy={n.y}
+              r={34}
+              fill={n.color}
+              className="kp-node-glow"
+              style={{ color: n.color }}
+            />
+            <circle
+              cx={n.x}
+              cy={n.y}
+              r={40}
+              fill="none"
+              stroke={n.color}
+              strokeOpacity={0.35}
+              strokeWidth="1.5"
+            />
             <text
               x={n.x}
               y={n.y + 10}
@@ -112,7 +140,7 @@ export function FiveCorners({
               fontSize="15"
               fontWeight="600"
               letterSpacing="0.12em"
-              fill="rgba(255,255,255,0.72)"
+              fill="rgba(255,255,255,0.68)"
               style={{ fontFamily: "var(--font-mono-plex), monospace" }}
             >
               {n.label}
@@ -124,11 +152,11 @@ export function FiveCorners({
         {showPulse ? (
           <g key={pulseKey}>
             <g className="kp-glow">
-              <circle r={16} fill="#FFFFFF" opacity={0.35}>
+              <circle r={18} fill="#FFFFFF" opacity={0.30}>
                 <animateMotion dur="3.2s" repeatCount="1" path={RING_PATH} />
               </circle>
             </g>
-            <circle r={7} fill="#FFFFFF">
+            <circle r={8} fill="#FFFFFF">
               <animateMotion dur="3.2s" repeatCount="1" path={RING_PATH} />
             </circle>
           </g>
