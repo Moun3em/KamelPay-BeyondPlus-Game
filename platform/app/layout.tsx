@@ -30,7 +30,15 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} ${source.variable} ${plexMono.variable} antialiased`}>
+      <body
+        className={`${outfit.variable} ${source.variable} ${plexMono.variable} antialiased`}
+      >
+        {/* Battery guard: pause all motion when the tab is hidden */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.addEventListener("visibilitychange",function(){var h=document.hidden;document.documentElement.classList.toggle("motion-paused",h);});`,
+          }}
+        />
         {children}
       </body>
     </html>

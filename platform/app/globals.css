@@ -163,3 +163,83 @@ input {
     transition: none !important;
   }
 }
+
+/* ============================================================================
+   KamelPay Motion Layer (Phase 1 — Five-Corner Field)
+   ----------------------------------------------------------------------------
+   All animation is transform/opacity only (compositor-friendly, no layout
+   thrash). Everything dies under prefers-reduced-motion (above) and pauses
+   when the tab is hidden via the html.motion-paused guard (layout.tsx).
+   ============================================================================ */
+
+/* Ambient: slow constellation drift (landing + projection) */
+@keyframes kp-drift {
+  0% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(14px, -10px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+.kp-drift {
+  animation: kp-drift 42s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Entrance: staggered rise (one-shot, backwards fill so hover transforms
+   keep working after the animation ends) */
+@keyframes kp-rise {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.kp-rise {
+  animation: kp-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Live pulse ring (console / projection status dot) */
+@keyframes kp-live {
+  0% { box-shadow: 0 0 0 0 rgba(111, 227, 181, 0.5); }
+  70% { box-shadow: 0 0 0 10px rgba(111, 227, 181, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(111, 227, 181, 0); }
+}
+.kp-live {
+  animation: kp-live 2s ease-out infinite;
+}
+
+/* Top-3 shimmer sweep (projection) */
+.kp-shimmer-wrap {
+  position: relative;
+  overflow: hidden;
+}
+.kp-shimmer {
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: kp-shimmer 5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes kp-shimmer {
+  from { transform: translateX(-130%); }
+  to { transform: translateX(330%); }
+}
+
+/* Pulse dot glow (projection scan moment) */
+@keyframes kp-glow {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+.kp-glow {
+  animation: kp-glow 1.6s ease-out both;
+}
+
+/* Visibility guard: pause every animation when the tab is hidden */
+html.motion-paused *,
+html.motion-paused *::before,
+html.motion-paused *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
