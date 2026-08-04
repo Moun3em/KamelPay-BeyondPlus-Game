@@ -28,11 +28,11 @@ Finish the game with the **highest capital**. Every company starts with **AED 1,
 ## The roles (5 per table)
 | Role | What you do |
 |---|---|
-| **CFO** | Watch the capital, call the strategy |
-| **Tax & Compliance** | Scan cards, read invoices, FILE / QUARANTINE |
-| **CIO** | Watch system health, handle outages in Phase C |
-| **OPS** | Find foreign invoices, take them to the ASP for return-to-owner trades |
-| **Procurement** | Source invoices from other tables, close the trades |
+| **Player 1** | Watch the capital, call the strategy |
+| **Player 2** | Scan cards, read invoices, FILE / QUARANTINE |
+| **Player 3** | Watch system health, handle outages in Phase C |
+| **Player 4** | Source invoices from other tables, close the trades |
+| **Player 5** | Find foreign invoices, take them to the ASP for return-to-owner trades |
 
 ## Phases
 - **LOBBY → TUTORIAL** — join, practice card

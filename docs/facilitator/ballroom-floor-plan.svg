@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 540" width="720" height="540" font-family="'Segoe UI', Arial, sans-serif">
+  <!-- KAMEL PAY — BALLROOM SETUP · RING ORDER (to spec 01_Physical_Game_Pack.md §6.3) -->
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#F07A00"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="360" y="16" text-anchor="middle" font-size="16" font-weight="700" fill="#0A1628">BALLROOM — 36 m × 24 m · SCALE 1 : 100 · 1 UNIT = 0.05 m</text>
+
+  <!-- Room -->
+  <rect x="0" y="24" width="720" height="480" fill="#F4F7FB" stroke="#0A1628" stroke-width="2"/>
+
+  <!-- Projection screen (north / front) -->
+  <rect x="240" y="28" width="240" height="14" rx="3" fill="#12305A"/>
+  <text x="360" y="39" text-anchor="middle" font-size="10" font-weight="700" fill="#FFFFFF">PROJECTION SCREEN — LEADERBOARD</text>
+
+  <!-- Ring guides -->
+  <circle cx="360" cy="264" r="190" fill="none" stroke="#D1DAE5" stroke-width="1.5" stroke-dasharray="6 6"/>
+  <circle cx="360" cy="264" r="140" fill="none" stroke="#D1DAE5" stroke-width="1" stroke-dasharray="3 5"/>
+
+  <!-- Tables T-01..T-10 clockwise from top, ring radius 190, table dia 1.8 m (r=18) -->
+  <g>
+    <circle cx="360"   cy="70"    r="18" fill="#FFF7EC" stroke="#F07A00" stroke-width="2.5"/>
+    <text x="360" y="74.5" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1628">T-01</text>
+    <circle cx="471.7" cy="106.3" r="18" fill="#FFFFFF" stroke="#0A1628" stroke-width="1.5"/>
+    <text x="471.7" y="110.8" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1628">T-02</text>
+    <circle cx="540.7" cy="201.3" r="18" fill="#FFFFFF" stroke="#0A1628" stroke-width="1.5"/>
+    <text x="540.7" y="205.8" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1628">T-03</text>
+    <circle cx="540.7" cy="326.7" r="18" fill="#FFFFFF" stroke="#0A1628" stroke-width="1.5"/>
+    <text x="540.7" y="331.2" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1628">T-04</text>
+    <circle cx="471.7" cy="421.7" r="18" fill="#FFFFFF" stroke="#0A1628" stroke-width="1.5"/>
+    <text x="471.7" y="426.2" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1628">T-05</text>
+    <circle cx="360"   cy="458"   r="18" fill="#FFFFFF" stroke="#0A1628" stroke-width="1.5"/>
+    <text x="360" y="462.5" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1628">T-06</text>
+    <circle cx="248.3" cy="421.7" r="18" fill="#FFFFFF" stroke="#0A1628" stroke-width="1.5"/>
+    <text x="248.3" y="426.2" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1628">T-07</text>
+    <circle cx="179.3" cy="326.7" r="18" fill="#FFFFFF" stroke="#0A1628" stroke-width="1.5"/>
+    <text x="179.3" y="331.2" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1628">T-08</text>
+    <circle cx="179.3" cy="201.3" r="18" fill="#FFFFFF" stroke="#0A1628" stroke-width="1.5"/>
+    <text x="179.3" y="205.8" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1628">T-09</text>
+    <circle cx="248.3" cy="106.3" r="18" fill="#FFFFFF" stroke="#0A1628" stroke-width="1.5"/>
+    <text x="248.3" y="110.8" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1628">T-10</text>
+  </g>
+
+  <!-- Ring order arrow (clockwise) -->
+  <path d="M 408 92 A 190 190 0 0 1 450 115" fill="none" stroke="#F07A00" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="470" y="70" font-size="10" font-weight="700" fill="#C45F00">RING ORDER — CLOCKWISE</text>
+  <text x="470" y="82" font-size="9" fill="#42546B">T-01 adjacent to T-10 (ring closes)</text>
+
+  <!-- ASP Station — West -->
+  <rect x="14" y="228" width="42" height="72" rx="4" fill="#1E8E5A"/>
+  <text x="35" y="254" text-anchor="middle" font-size="10" font-weight="700" fill="#FFFFFF">ASP</text>
+  <text x="35" y="266" text-anchor="middle" font-size="10" font-weight="700" fill="#FFFFFF">STATION</text>
+  <text x="35" y="280" text-anchor="middle" font-size="8" fill="#E8F5EE">CORNERS 3/4</text>
+  <text x="35" y="292" text-anchor="middle" font-size="8" fill="#E8F5EE">+ facilitator</text>
+
+  <!-- ASP Station — East -->
+  <rect x="664" y="228" width="42" height="72" rx="4" fill="#1E8E5A"/>
+  <text x="685" y="254" text-anchor="middle" font-size="10" font-weight="700" fill="#FFFFFF">ASP</text>
+  <text x="685" y="266" text-anchor="middle" font-size="10" font-weight="700" fill="#FFFFFF">STATION</text>
+  <text x="685" y="280" text-anchor="middle" font-size="8" fill="#E8F5EE">CORNERS 3/4</text>
+  <text x="685" y="292" text-anchor="middle" font-size="8" fill="#E8F5EE">+ facilitator</text>
+
+  <!-- Facilitator desk + entrance (south) -->
+  <rect x="300" y="478" width="120" height="12" rx="3" fill="#12305A"/>
+  <text x="360" y="487" text-anchor="middle" font-size="9" font-weight="700" fill="#FFFFFF">FACILITATOR DESK</text>
+  <path d="M 330 492 L 330 506 L 390 506 L 390 492" fill="none" stroke="#0A1628" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="360" y="520" text-anchor="middle" font-size="9" fill="#42546B">ENTRANCE — SETUP TEAM ENTERS HERE</text>
+
+  <!-- Wi-Fi note -->
+  <text x="14" y="60" font-size="9" fill="#42546B">Wi-Fi: dedicated SSID, no captive portal,</text>
+  <text x="14" y="71" font-size="9" fill="#42546B">load-tested with 50 devices (day before)</text>
+
+  <!-- Legend -->
+  <g transform="translate(14, 340)">
+    <text x="0" y="0" font-size="11" font-weight="700" fill="#0A1628">LEGEND</text>
+    <rect x="0" y="10" width="14" height="14" fill="#FFF7EC" stroke="#F07A00" stroke-width="2.5"/>
+    <text x="20" y="22" font-size="9" fill="#0A1628">Game table (×10) — 5 players, 1.8 m round</text>
+    <rect x="0" y="30" width="14" height="14" fill="#1E8E5A"/>
+    <text x="20" y="42" font-size="9" fill="#0A1628">ASP Station (×2) — opposite ends, unobstructed approach</text>
+    <rect x="0" y="50" width="14" height="14" fill="#12305A"/>
+    <text x="20" y="62" font-size="9" fill="#0A1628">Screen / desk — projection visible from every seat</text>
+    <text x="0" y="82" font-size="9" fill="#42546B">Clearance: ≥ 1.5 m between table edges (ring spacing 4.1 m — validated)</text>
+    <text x="0" y="94" font-size="9" fill="#42546B">Lighting up, not down — audience reads 14 pt detail lines on paper</text>
+    <text x="0" y="106" font-size="9" fill="#42546B">Ring diameter 19 m — fits 36 × 24 m ballroom with 7 m walkways</text>
+  </g>
+
+  <!-- Scale bar -->
+  <g transform="translate(560, 508)">
+    <rect x="0" y="0" width="50" height="6" fill="#0A1628"/>
+    <rect x="50" y="0" width="50" height="6" fill="#FFFFFF" stroke="#0A1628" stroke-width="1"/>
+    <text x="100" y="14" text-anchor="middle" font-size="9" fill="#0A1628">10 m</text>
+  </g>
+</svg>

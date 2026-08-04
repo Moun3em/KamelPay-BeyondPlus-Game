@@ -163,3 +163,160 @@ input {
     transition: none !important;
   }
 }
+
+/* ============================================================================
+   KamelPay Motion Layer (Phase 1 — Five-Corner Field)
+   ----------------------------------------------------------------------------
+   All animation is transform/opacity only (compositor-friendly, no layout
+   thrash). Everything dies under prefers-reduced-motion (above) and pauses
+   when the tab is hidden via the html.motion-paused guard (layout.tsx).
+   ============================================================================ */
+
+/* Ambient: slow constellation drift (landing + projection) */
+@keyframes kp-drift {
+  0% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(14px, -10px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+.kp-drift {
+  animation: kp-drift 42s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Entrance: staggered rise (one-shot, backwards fill so hover transforms
+   keep working after the animation ends) */
+@keyframes kp-rise {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.kp-rise {
+  animation: kp-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Live pulse ring (console / projection status dot) */
+@keyframes kp-live {
+  0% { box-shadow: 0 0 0 0 rgba(111, 227, 181, 0.5); }
+  70% { box-shadow: 0 0 0 10px rgba(111, 227, 181, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(111, 227, 181, 0); }
+}
+.kp-live {
+  animation: kp-live 2s ease-out infinite;
+}
+
+/* Top-3 shimmer sweep (projection) */
+.kp-shimmer-wrap {
+  position: relative;
+  overflow: hidden;
+}
+.kp-shimmer {
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: kp-shimmer 5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes kp-shimmer {
+  from { transform: translateX(-130%); }
+  to { transform: translateX(330%); }
+}
+
+/* Pulse dot glow (projection scan moment) */
+@keyframes kp-glow {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+.kp-glow {
+  animation: kp-glow 1.6s ease-out both;
+}
+
+/* Visibility guard: pause every animation when the tab is hidden */
+html.motion-paused *,
+html.motion-paused *::before,
+html.motion-paused *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+
+/* ============================================================================
+   Futuristic command-center layer (Phase 2)
+   ----------------------------------------------------------------------------
+   Dark HUD language: cyber grid, glow orbs, data-flow edges, glass panels.
+   Still transform/opacity-only where it moves, still dies under
+   prefers-reduced-motion (global block above) and the motion-paused guard.
+   ============================================================================ */
+
+/* Cyber grid backdrop */
+.kp-cyber-grid {
+  background-image:
+    linear-gradient(rgba(26, 122, 229, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 122, 229, 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 75% 65% at 50% 40%,
+    black 25%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    ellipse 75% 65% at 50% 40%,
+    black 25%,
+    transparent 78%
+  );
+}
+
+/* Glow orbs (slow breathing) */
+@keyframes kp-glow-pulse {
+  0%,
+  100% { opacity: 0.45; }
+  50% { opacity: 0.95; }
+}
+.kp-glow-pulse {
+  animation: kp-glow-pulse 4.5s ease-in-out infinite;
+}
+
+/* Data-flow edges on the routing diagram */
+@keyframes kp-flow {
+  to { stroke-dashoffset: -28; }
+}
+.kp-edge-flow {
+  stroke-dasharray: 5 7;
+  animation: kp-flow 1.3s linear infinite;
+}
+
+/* Node glow */
+.kp-node-glow {
+  filter: drop-shadow(0 0 10px currentColor);
+}
+
+/* Floating particles / ambient dots */
+@keyframes kp-float {
+  0%,
+  100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(8px, -14px, 0); }
+}
+.kp-float {
+  animation: kp-float 9s ease-in-out infinite;
+}
+
+/* Glass panel */
+.kp-glass {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Faint scan sweep (projection) */
+@keyframes kp-scan {
+  0% { transform: translateY(-1400%); }
+  100% { transform: translateY(1400%); }
+}
+.kp-scan-line {
+  animation: kp-scan 9s linear infinite;
+}

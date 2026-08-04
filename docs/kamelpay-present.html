@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Five-Corner Compliance Simulation — BeyondPlus × KamelPay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Outfit:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0A1628;
+      --navy: #12305A;
+      --signal: #1A7AE5;
+      --signal-deep: #0D5BB5;
+      --heat: #F07A00;
+      --heat-deep: #C45F00;
+      --paper: #F4F7FB;
+      --mist: #E4ECF6;
+      --line: rgba(18, 48, 90, 0.12);
+      --white: #FFFFFF;
+      --muted: #5A6B82;
+      --slide-w: 1920px;
+      --slide-h: 1080px;
+      --font-display: "Outfit", "Segoe UI", sans-serif;
+      --font-body: "Source Sans 3", "Segoe UI", sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #060D18;
+      color: var(--ink);
+      font-family: var(--font-body);
+      overflow: hidden;
+    }
+
+    .stage {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .deck {
+      width: var(--slide-w);
+      height: var(--slide-h);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: center center;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    }
+
+    .slide {
+      width: var(--slide-w);
+      height: var(--slide-h);
+      position: absolute;
+      inset: 0;
+      padding: 64px 88px 80px;
+      background: var(--paper);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+    .corner-frame {
+      position: absolute;
+      inset: 28px;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .corner-frame span {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-color: var(--signal);
+      border-style: solid;
+      opacity: 0.55;
+    }
+
+    .corner-frame .tl { top: 0; left: 0; border-width: 3px 0 0 3px; }
+    .corner-frame .tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-color: var(--heat); }
+    .corner-frame .bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-color: var(--heat); }
+    .corner-frame .br { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
+    .corner-frame .tm {
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 36px; height: 3px; border: none; background: var(--signal); opacity: 0.4;
+    }
+
+    .slide-meta {
+      position: absolute;
+      left: 96px;
+      right: 96px;
+      bottom: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 6;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .slide-meta .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .slide-meta .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--heat);
+    }
+
+    .progress {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 5px;
+      background: rgba(18, 48, 90, 0.08);
+      z-index: 7;
+    }
+
+    .progress > i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--signal), var(--heat));
+      transition: width 0.4s ease;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--signal-deep);
+      margin-bottom: 22px;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 28px;
+      height: 3px;
+      background: var(--heat);
+    }
+
+    h1, h2, h3 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.12;
+      color: var(--ink);
+    }
+
+    h1 { font-size: 68px; max-width: 16ch; font-weight: 800; }
+    h2 { font-size: 48px; margin-bottom: 20px; max-width: 22ch; }
+    h3 { font-size: 24px; margin-bottom: 8px; font-weight: 700; }
+
+    p, li {
+      font-size: 22px;
+      line-height: 1.4;
+      color: var(--navy);
+      font-weight: 500;
+    }
+
+    .lede {
+      font-size: 24px;
+      max-width: 38ch;
+      color: var(--navy);
+      margin-bottom: 28px;
+    }
+
+    .card p { font-size: 18px; }
+
+    ul.clean {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    ul.clean li {
+      position: relative;
+      padding-left: 36px;
+    }
+
+    ul.clean li::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0.55em;
+      width: 14px; height: 14px;
+      background: var(--heat);
+      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    }
+
+    ul.clean li strong {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .geo {
+      position: absolute;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .geo.orb {
+      width: 520px; height: 520px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(26, 122, 229, 0.18), transparent 70%);
+      right: -120px; top: -140px;
+    }
+
+    .geo.orb-heat {
+      width: 420px; height: 420px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, rgba(240, 122, 0, 0.16), transparent 70%);
+      left: -100px; bottom: -120px;
+    }
+
+    .geo.grid {
+      inset: 0;
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 80px 80px;
+      opacity: 0.45;
+      mask-image: radial-gradient(ellipse 70% 60% at 70% 40%, black, transparent);
+    }
+
+    .geo.stripe {
+      width: 14px;
+      top: 0; bottom: 0; left: 0;
+      background: linear-gradient(180deg, var(--signal), var(--heat));
+    }
+
+    .content { position: relative; z-index: 2; height: 100%; }
+
+    /* —— Media —— */
+    .media {
+      position: relative;
+      overflow: hidden;
+      background: var(--ink);
+      border: 1px solid var(--line);
+      box-shadow: 0 18px 50px rgba(10, 22, 40, 0.14);
+      height: 100%;
+      min-height: 0;
+    }
+
+    .media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .media .cap {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      padding: 16px 20px;
+      background: linear-gradient(180deg, transparent, rgba(7, 19, 33, 0.88));
+      color: rgba(255,255,255,0.88);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .media.contain {
+      background: #0B1524;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+
+    .media.contain img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* —— Title slide —— */
+    .slide.title {
+      background: #071321;
+      color: var(--white);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 0;
+    }
+
+    .slide.title .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .slide.title .hero-bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.55;
+    }
+
+    .slide.title .hero-veil {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        linear-gradient(105deg, rgba(7, 19, 33, 0.94) 0%, rgba(7, 19, 33, 0.78) 42%, rgba(7, 19, 33, 0.35) 72%, rgba(7, 19, 33, 0.55) 100%),
+        linear-gradient(180deg, transparent 40%, rgba(7, 19, 33, 0.85) 100%);
+    }
+
+    .slide.title .corner-frame span { border-color: rgba(255,255,255,0.45); opacity: 0.8; }
+    .slide.title .corner-frame .tr,
+    .slide.title .corner-frame .bl { border-color: var(--heat); }
+    .slide.title .corner-frame .tm { background: rgba(255,255,255,0.35); }
+    .slide.title .slide-meta { color: rgba(255,255,255,0.55); }
+    .slide.title .slide-meta .dot { background: var(--heat); }
+    .slide.title .progress { background: rgba(255,255,255,0.12); }
+
+    .slide.title .content {
+      padding: 64px 88px 120px;
+      z-index: 3;
+    }
+
+    .slide.title h1 {
+      color: var(--white);
+      font-size: 72px;
+      max-width: 14ch;
+      margin-bottom: 28px;
+      letter-spacing: -0.015em;
+    }
+
+    .slide.title .sub {
+      font-size: 28px;
+      color: rgba(255,255,255,0.78);
+      max-width: 38ch;
+      font-weight: 500;
+      margin-bottom: 40px;
+    }
+
+    .slide.title .eyebrow { color: rgba(255,255,255,0.7); }
+    .slide.title .eyebrow::before { background: var(--heat); }
+
+    .pill-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 10px 18px;
+      border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(8px);
+    }
+
+    .mark {
+      position: absolute;
+      top: 64px;
+      right: 88px;
+      z-index: 4;
+      text-align: right;
+      max-width: 320px;
+    }
+
+    .mark .name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 22px;
+      color: var(--white);
+    }
+
+    .mark .for {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      margin-top: 6px;
+    }
+
+    .mark.dark .name { color: var(--ink); }
+    .mark.dark .for { color: var(--muted); }
+
+    .card-grid {
+      display: grid;
+      gap: 24px;
+    }
+
+    .card-grid.two { grid-template-columns: 1fr 1fr; }
+    .card-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+    .card-grid.five { grid-template-columns: repeat(5, 1fr); }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      padding: 28px 28px 26px;
+      position: relative;
+      min-height: 0;
+      box-shadow: 0 12px 40px rgba(10, 22, 40, 0.06);
+    }
+
+    .card.roomy { min-height: 200px; padding: 36px 32px; }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: var(--signal);
+    }
+
+    .card.heat::before { background: var(--heat); }
+    .card.dual::before {
+      background: linear-gradient(90deg, var(--signal), var(--heat));
+    }
+
+    .card .index {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .card p { color: var(--navy); }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 22px;
+      margin-top: 12px;
+    }
+
+    .stat-block {
+      background: var(--white);
+      border: 1px solid var(--line);
+      padding: 32px 28px 28px;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-block::after {
+      content: "";
+      position: absolute;
+      right: -40px; bottom: -40px;
+      width: 140px; height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(26, 122, 229, 0.1), transparent 70%);
+    }
+
+    .stat-block.alt::after {
+      background: radial-gradient(circle, rgba(240, 122, 0, 0.12), transparent 70%);
+    }
+
+    .stat-block .num {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 56px;
+      line-height: 0.95;
+      color: var(--heat);
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .stat-block.alt .num { color: var(--signal); }
+
+    .stat-block p {
+      font-size: 18px;
+      max-width: 20ch;
+      position: relative;
+      z-index: 1;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 40px;
+      align-items: stretch;
+      height: calc(100% - 100px);
+      max-height: calc(100% - 100px);
+    }
+
+    .split > * { min-height: 0; }
+    .split.flip { grid-template-columns: 0.95fr 1.05fr; }
+    .split.wide-media { grid-template-columns: 0.9fr 1.1fr; }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feature-list li {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 16px;
+      align-items: start;
+      background: var(--white);
+      border: 1px solid var(--line);
+      padding: 14px 18px;
+    }
+
+    .feature-list .badge {
+      width: 44px; height: 44px;
+      background: var(--mist);
+      display: grid;
+      place-items: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--signal-deep);
+      flex-shrink: 0;
+    }
+
+    .feature-list h4 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 2px;
+      letter-spacing: -0.01em;
+    }
+
+    .feature-list p {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+
+    /* Roles */
+    .role-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(10, 22, 40, 0.06);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .role-card .photo {
+      height: 280px;
+      overflow: hidden;
+      background: #0B1524;
+    }
+
+    .role-card .photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+    }
+
+    .role-card .body {
+      padding: 20px 18px 22px;
+      flex: 1;
+    }
+
+    .role-card .role {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--heat-deep);
+      margin-bottom: 8px;
+    }
+
+    .role-card h3 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .role-card p {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    /* Loop steps */
+    .loop {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-top: 8px;
+    }
+
+    .loop-step {
+      background: var(--white);
+      border: 1px solid var(--line);
+      padding: 28px 24px;
+      position: relative;
+    }
+
+    .loop-step::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: var(--signal);
+    }
+
+    .loop-step:nth-child(2)::before { background: #2B8AE8; }
+    .loop-step:nth-child(3)::before { background: var(--heat); }
+    .loop-step:nth-child(4)::before { background: linear-gradient(90deg, var(--signal), var(--heat)); }
+
+    .loop-step .n {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .loop-step h3 { font-size: 26px; margin-bottom: 10px; }
+    .loop-step p { font-size: 18px; color: var(--muted); }
+
+    /* Phases */
+    .phase-rail {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .phase {
+      background: var(--white);
+      border: 1px solid var(--line);
+      padding: 28px 22px 24px;
+      min-height: 320px;
+      position: relative;
+    }
+
+    .phase::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: var(--signal);
+    }
+
+    .phase.heat::before { background: var(--heat); }
+    .phase.dual::before { background: linear-gradient(90deg, var(--signal), var(--heat)); }
+
+    .phase .time {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      color: var(--heat-deep);
+      margin-bottom: 14px;
+    }
+
+    .phase h3 { font-size: 22px; margin-bottom: 12px; }
+    .phase p { font-size: 17px; color: var(--muted); line-height: 1.35; }
+
+    .score-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .score-item {
+      background: var(--white);
+      border: 1px solid var(--line);
+      padding: 22px 24px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .score-item .delta {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+
+    .score-item .delta.up { color: var(--signal-deep); }
+    .score-item .delta.down { color: #C23B3B; }
+    .score-item h4 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .score-item p { font-size: 16px; color: var(--muted); }
+
+    .gold-callout {
+      margin-top: 28px;
+      background: linear-gradient(135deg, #0B1524, #12305A);
+      color: var(--white);
+      padding: 28px 32px;
+      border-left: 5px solid #C9A227;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .gold-callout .tag {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #C9A227;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+    }
+
+    .gold-callout h3 {
+      color: var(--white);
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .gold-callout p {
+      color: rgba(255,255,255,0.75);
+      font-size: 20px;
+      max-width: 52ch;
+    }
+
+    /* Closing */
+    .slide.close {
+      background: #071321;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .slide.close .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .slide.close .hero-bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.42;
+    }
+
+    .slide.close .hero-veil {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        radial-gradient(ellipse 70% 50% at 80% 20%, rgba(240, 122, 0, 0.28), transparent 55%),
+        linear-gradient(115deg, rgba(7, 19, 33, 0.96) 0%, rgba(7, 19, 33, 0.82) 48%, rgba(7, 19, 33, 0.55) 100%);
+    }
+
+    .slide.close .content {
+      padding: 64px 88px 120px;
+      z-index: 3;
+    }
+
+    .slide.close h1 {
+      color: var(--white);
+      font-size: 64px;
+      max-width: 16ch;
+      margin-bottom: 24px;
+      letter-spacing: -0.015em;
+    }
+
+    .slide.close .sub {
+      font-size: 28px;
+      color: rgba(255,255,255,0.75);
+      max-width: 36ch;
+      margin-bottom: 48px;
+    }
+
+    .slide.close .eyebrow { color: rgba(255,255,255,0.65); }
+    .slide.close .corner-frame span { border-color: rgba(255,255,255,0.4); opacity: 0.85; }
+    .slide.close .corner-frame .tr,
+    .slide.close .corner-frame .bl { border-color: var(--heat); }
+    .slide.close .corner-frame .tm { background: rgba(255,255,255,0.3); }
+    .slide.close .slide-meta { color: rgba(255,255,255,0.5); }
+    .slide.close .progress { background: rgba(255,255,255,0.12); }
+
+    .cta-row {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .cta {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 18px;
+      padding: 18px 32px;
+      background: var(--heat);
+      color: var(--white);
+      border: none;
+      letter-spacing: 0;
+    }
+
+    .cta.ghost {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.35);
+      color: var(--white);
+    }
+
+    .nav {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 50;
+      display: flex;
+      gap: 8px;
+      opacity: 0.35;
+      transition: opacity 0.2s;
+    }
+
+    .nav:hover { opacity: 1; }
+
+    .nav button {
+      width: 48px; height: 48px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(10, 22, 40, 0.85);
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+
+    .nav button:hover { background: var(--signal); border-color: var(--signal); }
+
+    .hint-keys {
+      position: fixed;
+      left: 24px;
+      bottom: 28px;
+      z-index: 50;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+    }
+
+    @page {
+      size: 13.333in 7.5in;
+      margin: 0;
+    }
+
+    @media print {
+      html, body {
+        overflow: visible !important;
+        background: white !important;
+        width: 13.333in;
+        height: auto;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .stage {
+        display: block !important;
+        width: auto !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      .deck {
+        transform: none !important;
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        width: 13.333in !important;
+        height: auto !important;
+        box-shadow: none !important;
+      }
+      .slide {
+        position: relative !important;
+        inset: auto !important;
+        width: 13.333in !important;
+        height: 7.5in !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        z-index: auto !important;
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        overflow: hidden !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .slide:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+      .nav, .hint-keys { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="deck" id="deck">
+
+      <!-- 01 TITLE -->
+      <section class="slide title active" data-slide="1">
+        <div class="hero-bg" aria-hidden="true">
+          <img src="marketing/01_hero.png" alt="" />
+        </div>
+        <div class="hero-veil" aria-hidden="true"></div>
+        <div class="corner-frame" aria-hidden="true">
+          <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><span class="tm"></span>
+        </div>
+        <div class="mark">
+          <div class="name">BeyondPlus</div>
+          <div class="for">Prepared for KamelPay</div>
+        </div>
+        <div class="content">
+          <div class="eyebrow">Serious Game · UAE E-Invoicing</div>
+          <h1>Five-Corner Compliance Simulation</h1>
+          <p class="sub">A one-day executive workshop game that turns mandatory B2B e-invoicing into judgment your clients will never forget.</p>
+          <div class="pill-row">
+            <span class="pill">Phygital · Cards + Live App</span>
+            <span class="pill">~50 executives · 10 tables</span>
+            <span class="pill">~90 minutes end-to-end</span>
+          </div>
+        </div>
+        <div class="slide-meta">
+          <div class="brand-lockup"><span class="dot"></span> BeyondPlus × KamelPay</div>
+          <div class="page">01</div>
+        </div>
+        <div class="progress"><i></i></div>
+      </section>
+
+      <!-- 02 CHALLENGE -->
+      <section class="slide" data-slide="2">
+        <div class="geo stripe"></div>
+        <div class="geo grid"></div>
+        <div class="geo orb"></div>
+        <div class="corner-frame" aria-hidden="true">
+          <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><span class="tm"></span>
+        </div>
+        <div class="mark dark">
+          <div class="name">BeyondPlus</div>
+          <div class="for">KamelPay Briefing</div>
+        </div>
+        <div class="content">
+          <div class="eyebrow">The challenge</div>
+          <h2>Mandates don’t build judgment. Pressure does.</h2>
+          <p class="lede">B2B e-invoicing is now the law in the UAE. Finance teams must upskill on more than policy — they need instinct under fire.</p>
+          <div class="card-grid three" style="margin-top: 8px;">
+            <div class="card roomy">
+              <div class="index">01 — FORMAT</div>
+              <h3>PINT AE XML</h3>
+              <p>Structured, machine-readable invoices — not PDFs, email, or paper. The FTA validates automatically.</p>
+            </div>
+            <div class="card roomy heat">
+              <div class="index">02 — JUDGMENT</div>
+              <h3>Compliant or trap?</h3>
+              <p>Valid and invalid invoices look identical. Only careful reading separates FILE from QUARANTINE.</p>
+            </div>
+            <div class="card roomy dual">
+              <div class="index">03 — STAKES</div>
+              <h3>Cabinet Decision 106</h3>
+              <p>Non-compliance carries real financial penalties. Wrong calls in the game cost capital — live.</p>
+            </div>
+          </div>
+          <p style="margin-top: 36px; font-size: 22px; color: var(--muted); max-width: 52ch;">
+            Traditional training teaches the rules. It cannot rehearse the tough call.
+          </p>
+        </div>
+        <div class="slide-meta">
+          <div class="brand-lockup"><span class="dot"></span> BeyondPlus × KamelPay</div>
+          <div class="page">02</div>
+        </div>
+        <div class="progress"><i></i></div>
+      </section>
+
+      <!-- 03 WHAT IT IS -->
+      <section class="slide" data-slide="3">
+        <div class="geo stripe"></div>
+        <div class="geo orb-heat"></div>
+        <div class="corner-frame" aria-hidden="true">
+          <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><span class="tm"></span>
+        </div>
+        <div class="mark dark">
+          <div class="name">BeyondPlus</div>
+          <div class="for">KamelPay Briefing</div>
+        </div>
+        <div class="content">
+          <div class="eyebrow">The product</div>
+          <div class="split wide-media">
+            <div>
+              <h2>Ten companies. One million AED each. One hour.</h2>
+              <p class="lede">Each table is a UAE company. Players scan physical invoice cards, decide FILE or QUARANTINE, and learn the regulation after every call.</p>
+              <div class="stack">
+                <div class="card">
+                  <div class="index">FORMAT</div>
+                  <h3>Phygital workshop</h3>
+                  <p>Physical cards + phones + a live scoring platform. No IT integration with KamelPay systems.</p>
+                </div>
+                <div class="card heat">
+                  <div class="index">WIN CONDITION</div>
+                  <h3>Highest compliant capital</h3>
+                  <p>Correct decisions earn AED. Wrong ones cost AED. The room’s live leaderboard decides the winner.</p>
+                </div>
+              </div>
+            </div>
+            <div class="media">
+              <img src="marketing/08_ballroom_table_overhead.png" alt="Executive table mid-game with cards, mat, and phones" />
+              <div class="cap">One table · 5 roles · cards + phones</div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-meta">
+          <div class="brand-lockup"><span class="dot"></span> BeyondPlus × KamelPay</div>
+          <div class="page">03</div>
+        </div>
+        <div class="progress"><i></i></div>
+      </section>
+
+      <!-- 04 HOW IT WORKS -->
+      <section class="slide" data-slide="4">
+        <div class="geo stripe"></div>
+        <div class="geo grid"></div>
+        <div class="corner-frame" aria-hidden="true">
+          <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><span class="tm"></span>
+        </div>
+        <div class="mark dark">
+          <div class="name">BeyondPlus</div>
+          <div class="for">KamelPay Briefing</div>
+        </div>
+        <div class="content">
+          <div class="eyebrow">The player loop</div>
+          <h2>Scan. Read. Decide. Learn.</h2>
+          <p class="lede" style="margin-bottom: 24px;">Every invoice card carries a QR. The platform shows the invoice, scores the decision, and explains the rule.</p>
+          <div class="split flip" style="height: calc(100% - 220px); max-height: none;">
+            <div class="media">
+              <img src="marketing/09_cards_closeup.png" alt="Close-up of invoice cards with QR codes" />
+              <div class="cap">210 cards · QR → phone → verdict</div>
+            </div>
+            <div>
+              <div class="loop" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="loop-step">
+                  <div class="n">01</div>
+                  <h3>Scan</h3>
+                  <p>Phone reads the QR — or type the card ID if the camera fails.</p>
+                </div>
+                <div class="loop-step">
+                  <div class="n">02</div>
+                  <h3>Read</h3>
+                  <p>Check TRNs, 51 fields, PINT AE XML, ASP routing, red flags.</p>
+                </div>
+                <div class="loop-step">
+                  <div class="n">03</div>
+                  <h3>Decide</h3>
+                  <p>FILE the compliant. QUARANTINE anything that fails the checklist.</p>
+                </div>
+                <div class="loop-step">
+                  <div class="n">04</div>
+                  <h3>Learn</h3>
+                  <p>The WHY modal shows the verdict and the regulation every time.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-meta">
+          <div class="brand-lockup"><span class="dot"></span> BeyondPlus × KamelPay</div>
+          <div class="page">04</div>
+        </div>
+        <div class="progress"><i></i></div>
+      </section>
+
+      <!-- 05 ROLES -->
+      <section class="slide" data-slide="5">
+        <div class="geo stripe"></div>
+        <div class="geo orb"></div>
+        <div class="corner-frame" aria-hidden="true">
+          <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><span class="tm"></span>
+        </div>
+        <div class="mark dark">
+          <div class="name">BeyondPlus</div>
+          <div class="for">KamelPay Briefing</div>
+        </div>
+        <div class="content">
+          <div class="eyebrow">The table</div>
+          <h2>Five roles. One company.</h2>
+          <p class="lede" style="margin-bottom: 28px;">Collaboration is the win condition — each player owns a different part of the compliance pipeline.</p>
+          <div class="card-grid five">
+            <article class="role-card">
+              <div class="photo"><img src="marketing/03_headshot_cfo.png" alt="Player 1 persona" /></div>
+              <div class="body">
+                <div class="role">Role 01</div>
+                <h3>Player 1</h3>
+                <p>Watches capital and calls the strategy.</p>
+              </div>
+            </article>
+            <article class="role-card">
+              <div class="photo"><img src="marketing/04_headshot_tax_director.png" alt="Player 2 persona" /></div>
+              <div class="body">
+                <div class="role">Role 02</div>
+                <h3>Player 2</h3>
+                <p>Scans cards, reads invoices, FILE / QUARANTINE.</p>
+              </div>
+            </article>
+            <article class="role-card">
+              <div class="photo"><img src="marketing/05_headshot_cio.png" alt="Player 3 persona" /></div>
+              <div class="body">
+                <div class="role">Role 03</div>
+                <h3>Player 3</h3>
+                <p>Owns system health and clears Phase C outages.</p>
+              </div>
+            </article>
+            <article class="role-card">
+              <div class="photo"><img src="marketing/06_headshot_procurement.png" alt="Player 4 persona" /></div>
+              <div class="body">
+                <div class="role">Role 04</div>
+                <h3>Player 4</h3>
+                <p>Sources invoices across tables and closes trades.</p>
+              </div>
+            </article>
+            <article class="role-card">
+              <div class="photo"><img src="marketing/07_headshot_ops.png" alt="Player 5 persona" /></div>
+              <div class="body">
+                <div class="role">Role 05</div>
+                <h3>Player 5</h3>
+                <p>Finds foreign invoices and runs them to the ASP.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+        <div class="slide-meta">
+          <div class="brand-lockup"><span class="dot"></span> BeyondPlus × KamelPay</div>
+          <div class="page">05</div>
+        </div>
+        <div class="progress"><i></i></div>
+      </section>
+
+      <!-- 06 SCORING -->
+      <section class="slide" data-slide="6">
+        <div class="geo stripe"></div>
+        <div class="geo grid"></div>
+        <div class="corner-frame" aria-hidden="true">
+          <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><span class="tm"></span>
+        </div>
+        <div class="mark dark">
+          <div class="name">BeyondPlus</div>
+          <div class="for">KamelPay Briefing</div>
+        </div>
+        <div class="content">
+          <div class="eyebrow">Real stakes</div>
+          <div class="split">
+            <div>
+              <h2>Capital is the scoreboard</h2>
+              <p class="lede">Every company starts with AED 1,000,000. Correct calls grow it. Mistakes shrink it. Outages bleed it.</p>
+              <div class="score-grid">
+                <div class="score-item">
+                  <div class="delta up">+50k</div>
+                  <div>
+                    <h4>FILE a valid invoice</h4>
+                    <p>Own table, compliant</p>
+                  </div>
+                </div>
+                <div class="score-item">
+                  <div class="delta up">+10k</div>
+                  <div>
+                    <h4>QUARANTINE an invalid</h4>
+                    <p>Caught the trap</p>
+                  </div>
+                </div>
+                <div class="score-item">
+                  <div class="delta down">−25k</div>
+                  <div>
+                    <h4>Quarantine a valid one</h4>
+                    <p>Lost revenue + fine</p>
+                  </div>
+                </div>
+                <div class="score-item">
+                  <div class="delta down">−1k / 10s</div>
+                  <div>
+                    <h4>Unresolved outage</h4>
+                    <p>Until Player 3 clears it</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="media">
+              <img src="marketing/02_ballroom_banner.png" alt="Ballroom event with live projection leaderboard" />
+              <div class="cap">Live projection · room energy · leaderboard</div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-meta">
+          <div class="brand-lockup"><span class="dot"></span> BeyondPlus × KamelPay</div>
+          <div class="page">06</div>
+        </div>
+        <div class="progress"><i></i></div>
+      </section>
+
+      <!-- 07 PHASES -->
+      <section class="slide" data-slide="7">
+        <div class="geo stripe"></div>
+        <div class="geo orb-heat"></div>
+        <div class="corner-frame" aria-hidden="true">
+          <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><span class="tm"></span>
+        </div>
+        <div class="mark dark">
+          <div class="name">BeyondPlus</div>
+          <div class="for">KamelPay Briefing</div>
+        </div>
+        <div class="content">
+          <div class="eyebrow">Session arc</div>
+          <h2>The platform self-drives the phases</h2>
+          <p class="lede" style="margin-bottom: 28px;">Facilitators run the room. The console carries the clock, announcements, and scoring.</p>
+          <div class="phase-rail">
+            <div class="phase">
+              <div class="time">LOBBY · 10 MIN</div>
+              <h3>Join &amp; claim roles</h3>
+              <p>Scan the table tent. Enter PIN. Claim Player 1–5. One phone can hold all five.</p>
+            </div>
+            <div class="phase">
+              <div class="time">TUTORIAL · 3 MIN</div>
+              <h3>Practice card</h3>
+              <p>One known-good scan. Confirm the WHY modal appears — that’s the whole teaching engine.</p>
+            </div>
+            <div class="phase heat">
+              <div class="time">A · INTERNAL AUDIT</div>
+              <h3>The race</h3>
+              <p>Read every invoice. FILE the compliant. QUARANTINE the traps. Volume with accuracy.</p>
+            </div>
+            <div class="phase heat">
+              <div class="time">B · TRADING</div>
+              <h3>The trade ring</h3>
+              <p>Three valid invoices sit on other tables. Bring them to the ASP — both companies gain AED 5,000.</p>
+            </div>
+            <div class="phase dual">
+              <div class="time">C → DEBRIEF</div>
+              <h3>Outages &amp; close</h3>
+              <p>Systems fail. Player 3 fixes them or the table bleeds capital. Leaderboard locks. Debrief sells the EPPA story with the room’s own numbers.</p>
+            </div>
+          </div>
+        </div>
+        <div class="slide-meta">
+          <div class="brand-lockup"><span class="dot"></span> BeyondPlus × KamelPay</div>
+          <div class="page">07</div>
+        </div>
+        <div class="progress"><i></i></div>
+      </section>
+
+      <!-- 08 LEARNING -->
+      <section class="slide" data-slide="8">
+        <div class="geo stripe"></div>
+        <div class="geo grid"></div>
+        <div class="corner-frame" aria-hidden="true">
+          <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><span class="tm"></span>
+        </div>
+        <div class="mark dark">
+          <div class="name">BeyondPlus</div>
+          <div class="for">KamelPay Briefing</div>
+        </div>
+        <div class="content">
+          <div class="eyebrow">Learning outcomes</div>
+          <h2>What every player walks away knowing</h2>
+          <p class="lede">Concrete regulatory literacy — rehearsed under time pressure, not recited from a handbook.</p>
+          <div class="stat-row">
+            <div class="stat-block">
+              <span class="num">51</span>
+              <p>Mandatory fields in a compliant PINT AE XML e-invoice</p>
+            </div>
+            <div class="stat-block alt">
+              <span class="num">6</span>
+              <p>Hallmarks of a valid e-invoice — format, TRNs, ASP, integrity</p>
+            </div>
+            <div class="stat-block">
+              <span class="num">5</span>
+              <p>Roles that must collaborate to keep a compliant ledger</p>
+            </div>
+            <div class="stat-block alt">
+              <span class="num">1</span>
+              <p>Golden rule: valid and invalid cards look identical</p>
+            </div>
+          </div>
+          <div class="gold-callout">
+            <div class="tag">Golden rule</div>
+            <div>
+              <h3>You cannot spot them by colour or design — only by reading.</h3>
+              <p>That is the training. Every decision comes back with the regulation explained. Players leave the room knowing e-invoicing.</p>
+            </div>
+          </div>
+        </div>
+        <div class="slide-meta">
+          <div class="brand-lockup"><span class="dot"></span> BeyondPlus × KamelPay</div>
+          <div class="page">08</div>
+        </div>
+        <div class="progress"><i></i></div>
+      </section>
+
+      <!-- 09 DELIVERY -->
+      <section class="slide" data-slide="9">
+        <div class="geo stripe"></div>
+        <div class="geo orb"></div>
+        <div class="corner-frame" aria-hidden="true">
+          <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><span class="tm"></span>
+        </div>
+        <div class="mark dark">
+          <div class="name">BeyondPlus</div>
+          <div class="for">KamelPay Briefing</div>
+        </div>
+        <div class="content">
+          <div class="eyebrow">Delivery</div>
+          <div class="split">
+            <div>
+              <h2>Seamless setup. Zero IT burden.</h2>
+              <p class="lede">Your team shows up ready to play. We run the room end-to-end.</p>
+              <ul class="feature-list">
+                <li>
+                  <div class="badge">01</div>
+                  <div>
+                    <h4>Plug &amp; play platform</h4>
+                    <p>Cloud app. Personal phones over venue Wi‑Fi. Zero touch to KamelPay systems.</p>
+                  </div>
+                </li>
+                <li>
+                  <div class="badge">02</div>
+                  <div>
+                    <h4>Complete physical kit</h4>
+                    <p>Table tents, 210 invoice cards, how-to-play cards, reference sheets, facilitator console.</p>
+                  </div>
+                </li>
+                <li>
+                  <div class="badge">03</div>
+                  <div>
+                    <h4>Facilitated session</h4>
+                    <p>BeyondPlus handles briefing, live ops, ASP trades, overrides, and the EPPA debrief.</p>
+                  </div>
+                </li>
+                <li>
+                  <div class="badge">04</div>
+                  <div>
+                    <h4>~90 minutes</h4>
+                    <p>Lobby + tutorial + core loop + structured debrief. High impact, time-efficient.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="stack" style="height: 100%;">
+              <div class="media" style="flex: 1.15;">
+                <img src="marketing/10_game_kit.png" alt="Complete physical game kit on a table" />
+                <div class="cap">Full kit · print + digital</div>
+              </div>
+              <div class="media contain" style="flex: 0.85;">
+                <img src="facilitator/ballroom-floor-plan.svg" alt="Ballroom floor plan with 10 tables in a ring" />
+                <div class="cap">10-table ring · ASP stations · projection</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-meta">
+          <div class="brand-lockup"><span class="dot"></span> BeyondPlus × KamelPay</div>
+          <div class="page">09</div>
+        </div>
+        <div class="progress"><i></i></div>
+      </section>
+
+      <!-- 10 CLOSE -->
+      <section class="slide close" data-slide="10">
+        <div class="hero-bg" aria-hidden="true">
+          <img src="marketing/02_ballroom_banner.png" alt="" />
+        </div>
+        <div class="hero-veil" aria-hidden="true"></div>
+        <div class="corner-frame" aria-hidden="true">
+          <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span><span class="tm"></span>
+        </div>
+        <div class="mark">
+          <div class="name">BeyondPlus</div>
+          <div class="for">Next step</div>
+        </div>
+        <div class="content">
+          <div class="eyebrow">The ask</div>
+          <h1>Experiential compliance that sticks.</h1>
+          <p class="sub">A flagship workshop KamelPay can run across its client base — serious enough for the FTA, memorable enough for the C-suite.</p>
+          <div class="cta-row">
+            <div class="cta">Approve a pilot session</div>
+            <div class="cta ghost">Review the full game pack</div>
+          </div>
+          <p style="margin-top: 48px; font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.45);">
+            BeyondPlus · Five-Corner Compliance Simulation · Confidential
+          </p>
+        </div>
+        <div class="slide-meta">
+          <div class="brand-lockup"><span class="dot"></span> BeyondPlus × KamelPay</div>
+          <div class="page">10</div>
+        </div>
+        <div class="progress"><i></i></div>
+      </section>
+
+    </div>
+  </div>
+
+  <div class="hint-keys">← → or click to advance · F for fullscreen</div>
+  <div class="nav">
+    <button type="button" id="prev" aria-label="Previous slide">←</button>
+    <button type="button" id="next" aria-label="Next slide">→</button>
+  </div>
+
+  <script>
+    (function () {
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const deck = document.getElementById("deck");
+      const total = slides.length;
+      let index = 0;
+
+      function show(i) {
+        index = Math.max(0, Math.min(total - 1, i));
+        slides.forEach((s, n) => {
+          const on = n === index;
+          s.classList.toggle("active", on);
+          s.style.visibility = on ? "visible" : "hidden";
+          s.style.opacity = on ? "1" : "0";
+          s.style.zIndex = on ? "2" : "0";
+          const page = s.querySelector(".page");
+          if (page) {
+            page.textContent =
+              String(n + 1).padStart(2, "0") + " / " + String(total).padStart(2, "0");
+          }
+          const bar = s.querySelector(".progress > i");
+          if (bar) {
+            bar.style.width = ((n + 1) / total) * 100 + "%";
+          }
+        });
+      }
+
+      function fit() {
+        const scale = Math.min(
+          window.innerWidth / 1920,
+          window.innerHeight / 1080
+        );
+        deck.style.transform =
+          "translate(-50%, -50%) scale(" + scale + ")";
+      }
+
+      document.getElementById("prev").addEventListener("click", () => show(index - 1));
+      document.getElementById("next").addEventListener("click", () => show(index + 1));
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
+          e.preventDefault();
+          show(index + 1);
+        } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+          e.preventDefault();
+          show(index - 1);
+        } else if (e.key === "Home") {
+          show(0);
+        } else if (e.key === "End") {
+          show(total - 1);
+        } else if (e.key === "f" || e.key === "F") {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen?.();
+          } else {
+            document.exitFullscreen?.();
+          }
+        }
+      });
+
+      document.querySelector(".stage").addEventListener("click", (e) => {
+        if (e.target.closest(".nav") || e.target.closest("button")) return;
+        const mid = window.innerWidth / 2;
+        show(e.clientX >= mid ? index + 1 : index - 1);
+      });
+
+      window.addEventListener("resize", fit);
+      fit();
+      show(0);
+    })();
+  </script>
+</body>
+</html>

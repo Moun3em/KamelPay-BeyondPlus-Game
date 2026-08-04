@@ -11,7 +11,7 @@
 
 ## 09:00 — LOBBY (10 min)
 - Welcome + the 5-min e-invoicing presentation (slide deck provided)
-- "Open the link, enter your table PIN, claim your roles — CFO, Tax & Compliance, CIO, OPS, Procurement"
+- "Open the link, enter your table PIN, claim your roles — Player 1–5"
 - Walk the room: every table must have ≥3 devices. Use **Red flags** on the console to spot stragglers
 - Fewer than 5 per table? One phone can claim ALL roles
 
@@ -25,12 +25,12 @@
 - **Do not** touch capital unless a real failure happened (phone died mid-scan → use Adjust)
 
 ## Phase B — Trading opens (8 min)
-- Announce: "Procurement: find foreign invoices and bring them to the ASP"
+- Announce: "Player 4: find foreign invoices and bring them to the ASP"
 - You are the ASP: **trade validation panel** — type Card ID, From, To, Validate. Both tables get +5,000
 - Keep a short queue; validate as they arrive
 
 ## Phase C — Outages + green cards (10 min)
-- Announce: "Outages are hitting. CIOs: fix your systems."
+- Announce: "Outages are hitting. Player 3: fix your systems."
 - **Console: advance to C** — outages arm automatically
 - Resolve outages only if a table is genuinely stuck (Force-resolve)
 - Watch the 150k cap — a table bleeding hard may need help

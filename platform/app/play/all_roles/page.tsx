@@ -14,11 +14,11 @@ export default function AllRolesPage() {
   }, [error, router]);
 
   const links = [
-    { href: "/play/cfo", label: "CFO — Balance sheet" },
-    { href: "/play/tax", label: "Tax — Scanner" },
-    { href: "/play/cio", label: "CIO — Systems" },
-    { href: "/play/procurement", label: "Procurement — Trade" },
-    { href: "/play/ops", label: "Operations — Trade" },
+    { href: "/play/cfo", label: "Player 1 — Balance sheet" },
+    { href: "/play/tax", label: "Player 2 — Scanner" },
+    { href: "/play/cio", label: "Player 3 — Systems" },
+    { href: "/play/procurement", label: "Player 4 — Trade" },
+    { href: "/play/ops", label: "Player 5 — Trade" },
   ];
 
   return (

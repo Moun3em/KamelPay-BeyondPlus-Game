@@ -80,7 +80,7 @@ Two slide decks are required:
 **Slide A8 — The stakes (3 penalty cards)**
 - FILING A BAD INVOICE → immediate fine
 - QUARANTINING A GOOD ONE → lost revenue + fine
-- OUTAGES → "−1,000 AED every 10 seconds until your CIO fixes the system"
+- OUTAGES → "−1,000 AED every 10 seconds until Player 3 fixes the system"
 - Notes: "Real money, real pressure. That's the game."
 
 **Slide A9 — Your loop (4-step process flow)**
@@ -98,7 +98,7 @@ Two slide decks are required:
 - Notes: "Do not trust the card's look. Trust the invoice's content."
 
 **Slide A11 — How to join (practical, shown during LOBBY)**
-- "1. Open the link on your phone. 2. Enter your table number + table PIN. 3. Claim your role: CFO, Tax & Compliance, CIO, OPS, Procurement. 4. One phone can claim ALL roles — a full table is not required."
+- "1. Open the link on your phone. 2. Enter your table number + table PIN. 3. Claim your role: Player 1–5. 4. One phone can claim ALL roles — a full table is not required."
 - Visual: phone mock with the join screen; the PIN pad.
 - Notes: "Facilitator: show this while people join. Target: every table with at least 3 devices."
 
@@ -145,16 +145,16 @@ Two slide decks are required:
 - Notes: "Event Mode auto-advances to B at 15:00 — it will announce. You don't need to watch the clock."
 
 **Slide B6 — Phase B · Trading opens (25 min)**
-- Announce: "Procurement: foreign invoices are sitting on other tables. Find them, bring them to the ASP."
+- Announce: "Player 4: foreign invoices are sitting on other tables. Find them, bring them to the ASP."
 - You are the ASP: **trade validation panel** — type Card ID, From table, To table (owner), Validate. Both tables +5,000.
 - Keep a short queue; validate as they arrive. The platform shows the compliance verdict on screen.
 - Watch: trades arriving, wrong-owner mistakes (the platform rejects them — tell the table why).
 - Notes: "The trade ritual is the theatre: both Ops leads present, you validate, the screen shows the routing animation."
 
 **Slide B7 — Phase C · Outages + control cards (20 min)**
-- Announce: "Outages are striking. CIOs: fix your systems."
+- Announce: "Outages are striking. Player 3: fix your systems."
 - Outages arm automatically on the stagger schedule; each unresolved outage drains −1,000/10s (cap −150k).
-- CIOs solve by answering the outage question; green CONTROL cards unlock once resolved.
+- Player 3 solves by answering the outage question; green CONTROL cards unlock once resolved.
 - Force-resolve only if a table is genuinely stuck.
 - Watch: the 150k cap; a table bleeding hard may need help.
 - Notes: "Event Mode announces the outage phase. You're the safety net, not the hero."

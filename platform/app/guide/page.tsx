@@ -33,14 +33,14 @@ const phases = [
     name: "Phase B — Trading",
     time: "25 min",
     what: "Some of your valid invoices physically sit at other tables. You can't close a clean ledger without them. Trading opens through the ASP.",
-    act: "Players: Procurement leads — find foreign invoices, bring them to the ASP station. Facilitator: validate trades (Card ID, From, To, Validate). Both tables earn +5,000.",
+    act: "Players: find foreign invoices and bring them to the ASP station (Player 4 leads the hunt). Facilitator: validate trades (Card ID, From, To, Validate). Both tables earn +5,000.",
   },
   {
     n: "04",
     name: "Phase C — Outages",
     time: "20 min",
-    what: "Outages strike. Each unresolved outage drains −1,000 every 10 seconds (cap −150,000). CIOs solve them; green CONTROL cards unlock.",
-    act: "Players: CIO answers the outage question. Facilitator: force-resolve only if a table is genuinely stuck.",
+    what: "Outages strike. Each unresolved outage drains −1,000 every 10 seconds (cap −150,000). Player 3 solves them; green CONTROL cards unlock.",
+    act: "Players: Player 3 answers the outage question. Facilitator: force-resolve only if a table is genuinely stuck.",
   },
   {
     n: "05",
@@ -60,34 +60,34 @@ const phases = [
 
 const roles = [
   {
-    name: "CFO",
+    name: "Player 1",
     color: "violet",
     duty: "Owns the capital. Sets the pace and the risk appetite for the table.",
     tip: "Watch the live leaderboard and decide when your table plays aggressively or safely.",
   },
   {
-    name: "Tax & Compliance",
+    name: "Player 2",
     color: "red",
     duty: "The authority on invoice decisions. Reads every card carefully and calls FILE or QUARANTINE.",
     tip: "You are the voice of the regulation — when in doubt, quarantine and review later.",
   },
   {
-    name: "CIO",
+    name: "Player 3",
     color: "orange",
     duty: "Owns systems. When an outage hits, only you can solve it.",
     tip: "Outage questions are under time pressure — your table bleeds capital every 10 seconds you hesitate.",
   },
   {
-    name: "OPS",
-    color: "blue",
-    duty: "Keeps the pipeline moving. Scans volume, watches the flow, flags anomalies.",
-    tip: "You are the first reader. Catch the red flags before they reach compliance.",
-  },
-  {
-    name: "Procurement",
+    name: "Player 4",
     color: "green",
     duty: "Owns the trade ring. Knows which invoices are foreign and negotiates with other tables.",
     tip: "In Phase B you are the deal-maker. A trade done right is +5,000 for both tables.",
+  },
+  {
+    name: "Player 5",
+    color: "blue",
+    duty: "Keeps the pipeline moving. Scans volume, watches the flow, flags anomalies.",
+    tip: "You are the first reader. Catch the red flags before they reach compliance.",
   },
 ];
 
@@ -97,7 +97,7 @@ const scoring = [
   ["FILE an invalid invoice", "Penalty", "The card's regulatory penalty is applied to your capital."],
   ["QUARANTINE a valid invoice", "−25,000", "You rejected a compliant invoice. Lost revenue + fine."],
   ["ASP-validated trade", "+5,000 both", "Foreign invoice returned to its true owner — both tables earn."],
-  ["Unresolved outage", "−1,000 / 10 s", "Drains every 10 seconds until the CIO solves it. Cap −150,000."],
+  ["Unresolved outage", "−1,000 / 10 s", "Drains every 10 seconds until Player 3 solves it. Cap −150,000."],
 ];
 
 const emergencies = [
@@ -145,7 +145,7 @@ const faqs = [
   ],
   [
     "What happens when an outage hits?",
-    "A banner appears; your capital drains −1,000 every 10 seconds. Your CIO solves the outage question to stop it. Once resolved, green CONTROL cards unlock for your table.",
+    "A banner appears; your capital drains −1,000 every 10 seconds. Player 3 solves the outage question to stop it. Once resolved, green CONTROL cards unlock for your table.",
   ],
   [
     "What if I disconnect mid-game?",

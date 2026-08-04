@@ -146,7 +146,7 @@ export default function JoinPage() {
         <section className="flex flex-col gap-4">
           <h2 className="text-2xl font-bold">Claim your role</h2>
           <p className="text-lg text-[var(--kp-slate)]">
-            CFO, Tax and CIO are required. One dead phone? Claim All roles.
+            Players 1, 2 and 3 are required. One dead phone? Claim All roles.
           </p>
           <div className="flex flex-col gap-3">
             {ROLES.map((role) => {
