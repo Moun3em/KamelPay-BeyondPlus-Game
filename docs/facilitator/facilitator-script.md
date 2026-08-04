@@ -23,7 +23,7 @@ The platform carries the mechanics and the teaching. Your job is the room: keep 
 - [ ] Brief the floor facilitators: the script, the red flags, the ASP ritual, the emergency table
 
 ## LOBBY — 09:00 (10 min) — "Get everyone in"
-**Say:** *"Open the link on your phones, enter your table number and the PIN on your tent, and claim your roles — CFO, Tax & Compliance, CIO, OPS, Procurement. One phone can hold all five roles if you're short-handed."*
+**Say:** *"Open the link on your phones, enter your table number and the PIN on your tent, and claim your roles — Player 1 through 5. One phone can hold all five roles if you're short-handed."*
 **MC does:** watch the console tables view; use Red flags to spot stragglers.
 **Floor does:** walk the room; every table needs ≥3 devices before you start the clock.
 
@@ -38,13 +38,13 @@ The platform carries the mechanics and the teaching. Your job is the room: keep 
 **Floor does:** encourage volume, not perfection. Do not hint at any card's answer.
 
 ## Phase B — Trading (25 min) — "The trade ring"
-**Say:** *"Three of your valid invoices are sitting at other tables. Procurement: find them, negotiate, and bring them to the ASP. OPS: verify before you trade."*
+**Say:** *"Three of your valid invoices are sitting at other tables. Players 4 and 5: find them, negotiate, verify, and bring them to the ASP."*
 **MC = the ASP:** open the console trade panel: **Card ID, From, To, Validate**. Both tables earn +5,000. The platform shows the compliance verdict on the screen — read it aloud so the room hears the reason.
-**Floor does:** run the queue at their cluster's tables; fetch trades from the OPS leads; keep the line moving.
+**Floor does:** run the queue at their cluster's tables; fetch trades from the table trade leads; keep the line moving.
 
 ## Phase C — Outages (20 min) — "Systems down"
-**Say:** *"Outages are striking. CIOs: fix your systems now — every 10 seconds unresolved costs your table 1,000."*
-**MC does:** outages arm automatically; force-resolve only if a table is genuinely stuck (or the CIO's phone died).
+**Say:** *"Outages are striking. Player 3: fix your systems now — every 10 seconds unresolved costs your table 1,000."*
+**MC does:** outages arm automatically; force-resolve only if a table is genuinely stuck (or Player 3's phone died).
 **Floor does:** keep calm tables calm; the drain is loud on the projection.
 
 ## FROZEN → DEBRIEF (5+ min) — "The close"

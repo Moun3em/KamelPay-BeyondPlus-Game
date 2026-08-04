@@ -24,7 +24,7 @@ export function guidanceFor(phase: Phase, eventMode: boolean, paused: boolean): 
         title: "Joining time — get everyone in",
         steps: [
           "Tables open the link on their phones and enter their PIN.",
-          "Claim roles: CFO, Tax & Compliance, CIO, OPS, Procurement (one phone can claim ALL roles).",
+          "Claim roles: Player 1–5 (one phone can claim ALL roles).",
           "Check the table below — every table should have at least 3 devices.",
           "When everyone is in: press TUTORIAL to start the clock.",
         ],

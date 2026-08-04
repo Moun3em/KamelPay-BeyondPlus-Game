@@ -60,8 +60,8 @@ export const PHASE_DURATIONS_MS: Record<string, number> = {
 export const EVENT_PHASE_ANNOUNCEMENTS: Partial<Record<Phase, string>> = {
   TUTORIAL: "Phase TUTORIAL — practice scan: try a card, learn the scanner and the decision.",
   A: "Phase A — Internal Audit: scanning is open. Read each invoice, then FILE or QUARANTINE.",
-  B: "Phase B — Trading is open: OPS & Procurement, return foreign invoices to their owners via the ASP for a network bonus.",
-  C: "Phase C — Outages are striking. CIOs: fix your systems before the capital drains.",
+  B: "Phase B — Trading is open: return foreign invoices to their owners via the ASP for a network bonus.",
+  C: "Phase C — Outages are striking. Systems are failing — fix yours before the capital drains.",
   FROZEN: "Game over — the leaderboard is frozen. Well played!",
 };
 
@@ -76,13 +76,14 @@ export const ROLES = [
 
 export type Role = (typeof ROLES)[number];
 
-/** Map seed role names → short role codes used in devices.role */
+/** Map seed role keys → display labels. Client decision (Aug 2026): the
+ *  audience is all senior finance — roles are presented as Player 1–5. */
 export const ROLE_LABELS: Record<string, string> = {
-  CFO: "CFO",
-  TAX: "Tax & Compliance",
-  CIO: "CIO",
-  PROCUREMENT: "Procurement",
-  OPS: "Operations",
+  CFO: "Player 1",
+  TAX: "Player 2",
+  CIO: "Player 3",
+  PROCUREMENT: "Player 4",
+  OPS: "Player 5",
   ALL_ROLES: "All roles (single device)",
 };
 
