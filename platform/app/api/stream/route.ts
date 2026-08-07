@@ -27,7 +27,9 @@ export async function GET(req: Request) {
         if (closed) return clearInterval(interval);
         try {
           const tick = await getTick();
-          const version = tableNo ? await getTableVersion(Number(tableNo)) : tick.version;
+          const version = tableNo
+            ? Math.max(tick.version, await getTableVersion(Number(tableNo)))
+            : tick.version;
           if (version === lastVersion) return send({ type: "ping", at: Date.now() });
           lastVersion = version;
           const snapshot = kind === "postgres"

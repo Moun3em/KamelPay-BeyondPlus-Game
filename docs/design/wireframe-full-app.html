@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Five-Corner Compliance Simulation — Full App Wireframe</title>
+<style>
+  :root {
+    --ink: #0A1628; --navy: #12305A; --signal: #1A7AE5; --heat: #F07A00;
+    --paper: #F4F7FB; --mist: #E4ECF6; --line: rgba(18,48,90,0.12); --muted: #5A6B82;
+    --white: #FFFFFF; --green: #1E8E5A; --warn: #E8A020; --danger: #C23B3B;
+    --font-display: "Outfit","Segoe UI",sans-serif; --font-body: "Source Sans 3","Segoe UI",sans-serif; --font-mono: "IBM Plex Mono",ui-monospace,monospace;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#060D18; color:var(--ink); font-family:var(--font-body); padding:24px; }
+  h1 { font-family:var(--font-display); font-size:40px; font-weight:800; color:white; text-align:center; margin-bottom:8px; }
+  .subtitle { text-align:center; color:rgba(255,255,255,0.55); font-size:16px; margin-bottom:36px; font-family:var(--font-mono); letter-spacing:0.05em; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(420px, 1fr)); gap:24px; max-width:1600px; margin:0 auto; }
+  .screen { background:var(--paper); border:1px solid var(--line); border-radius:16px; overflow:hidden; position:relative; }
+  .screen-header { padding:14px 20px; background:var(--navy); color:white; display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:13px; letter-spacing:0.06em; }
+  .screen-header .role { font-weight:700; }
+  .screen-header .route { opacity:0.65; }
+  .wire { padding:20px; display:flex; flex-direction:column; gap:12px; min-height:280px; }
+  .wire-box { border:2px dashed var(--line); border-radius:10px; padding:14px; position:relative; }
+  .wire-box.solid { border-style:solid; }
+  .wire-box.accent-blue { border-color:var(--signal); }
+  .wire-box.accent-heat { border-color:var(--heat); }
+  .wire-box.accent-green { border-color:var(--green); }
+  .wire-label { font-family:var(--font-mono); font-size:11px; letter-spacing:0.06em; color:var(--muted); position:absolute; top:-9px; left:12px; background:var(--paper); padding:0 6px; }
+  .wire-h1 { height:32px; background:var(--mist); border-radius:6px; width:70%; }
+  .wire-h2 { height:22px; background:var(--mist); border-radius:5px; width:50%; }
+  .wire-p { height:14px; background:var(--mist); border-radius:4px; width:90%; }
+  .wire-p.short { width:60%; }
+  .wire-btn { height:40px; background:var(--signal); border-radius:10px; width:120px; }
+  .wire-btn.outline { height:38px; background:transparent; border:2px dashed var(--signal); }
+  .wire-chip { display:inline-block; height:22px; background:var(--mist); border-radius:11px; width:64px; margin:2px; }
+  .wire-row { display:flex; gap:10px; align-items:center; }
+  .wire-circle { width:40px; height:40px; border-radius:50%; border:2px dashed var(--line); flex-shrink:0; }
+  .wire-qr { width:90px; height:90px; border:2px dashed var(--line); flex-shrink:0; }
+  .wire-camera { width:100%; height:140px; background:var(--mist); border-radius:10px; display:grid; place-items:center; font-size:13px; color:var(--muted); }
+  .wire-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .wire-table th,.wire-table td { border:1px solid var(--line); padding:6px 8px; text-align:left; font-family:var(--font-mono); }
+  .wire-table th { background:var(--mist); font-weight:700; }
+  .wire-table td { color:var(--muted); }
+
+  .editable { border:1px solid var(--signal); border-radius:6px; padding:10px; margin-top:14px; background:#F8FBFF; }
+  .editable h4 { font-size:13px; font-family:var(--font-mono); letter-spacing:0.05em; color:var(--muted); margin-bottom:6px; }
+  .editable [contenteditable] { font-family:var(--font-body); font-size:15px; color:var(--ink); min-height:40px; outline:none; padding:4px; }
+  .editable [contenteditable]:empty::before { content:attr(data-placeholder); color:var(--muted); opacity:0.6; }
+
+  .design-feedback { border:2px dashed var(--heat); border-radius:8px; padding:12px; margin-top:14px; background:#FFF7EC; }
+  .design-feedback h4 { font-size:13px; font-family:var(--font-mono); letter-spacing:0.05em; color:var(--heat); margin-bottom:6px; }
+  .design-feedback textarea { width:100%; min-height:60px; border:1px solid var(--line); border-radius:6px; padding:8px; font-family:var(--font-body); font-size:13px; resize:vertical; background:white; }
+
+  .legend { display:flex; gap:16px; justify-content:center; margin-top:40px; padding:16px; flex-wrap:wrap; }
+  .legend span { font-size:12px; font-family:var(--font-mono); letter-spacing:0.05em; display:flex; align-items:center; gap:6px; color:rgba(255,255,255,0.65); }
+  .legend .swatch { width:12px; height:12px; border-radius:3px; }
+  @media print { body { background:white; padding:0; } h1 { color:var(--ink); } .subtitle { color:var(--muted); } .screen { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<h1>📐 Five-Corner Compliance Simulation — Full Wireframe</h1>
+<p class="subtitle">🟡 Comms: edit text blocks in blue boxes &nbsp;|&nbsp; 🟠 Design: suggest improvements in orange boxes &nbsp;|&nbsp; ⬜ Wireframes: grey placeholders</p>
+
+<div class="grid">
+
+<!-- SCREEN 1 — LANDING -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 01</span><span class="route">GET /</span></div>
+  <div class="wire">
+    <div class="wire-box">
+      <div class="wire-label">HERO HEADER</div>
+      <div class="wire-h1" style="width:55%"></div>
+      <div class="wire-p short" style="margin-top:8px"></div>
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><div class="wire-chip" style="width:90px"></div><div class="wire-chip" style="width:80px"></div><div class="wire-chip" style="width:70px"></div></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
+      <div class="wire-box solid"><div class="wire-label">NAV CARD</div><div class="wire-h2"></div><div class="wire-p short"></div><div class="wire-btn outline" style="margin-top:8px"></div></div>
+      <div class="wire-box solid"><div class="wire-label">NAV CARD</div><div class="wire-h2"></div><div class="wire-p short"></div><div class="wire-btn outline" style="margin-top:8px"></div></div>
+      <div class="wire-box solid"><div class="wire-label">NAV CARD</div><div class="wire-h2"></div><div class="wire-p short"></div><div class="wire-btn outline" style="margin-top:8px"></div></div>
+    </div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Landing page copy</h4><div contenteditable data-placeholder="Current: Five-Corner Compliance Simulation hero + 'A one-day executive workshop game…'">Five-Corner Compliance Simulation — A one-day executive workshop game that turns mandatory B2B e‑invoicing into judgment your clients will never forget.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Landing page</h4><textarea placeholder="e.g. 'The three nav cards feel cramped — suggest a two-column layout on mobile' or 'Hero image needs more breathing room above headline'"></textarea></div>
+</div>
+
+<!-- SCREEN 2 — JOIN (PIN) -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 02a</span><span class="route">GET /join?t=1</span></div>
+  <div class="wire">
+    <div class="wire-row" style="justify-content:space-between"><div class="wire-p short" style="width:60px"></div><div class="wire-btn outline" style="width:70px"></div></div>
+    <div class="wire-h1" style="width:45%"></div>
+    <div class="wire-box"><div class="wire-label">TABLE NUMBER</div><div class="wire-h2" style="width:30%"></div></div>
+    <div class="wire-box"><div class="wire-label">PIN ENTRY · 6 CHARS</div><div class="wire-h2" style="width:60%; letter-spacing:0.3em">· · · · · ·</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+      <div class="wire-btn outline" style="width:auto"></div><div class="wire-btn outline" style="width:auto"></div><div class="wire-btn outline" style="width:auto"></div><div class="wire-btn outline" style="width:auto"></div>
+    </div>
+    <div class="wire-row" style="gap:12px"><div class="wire-btn outline" style="width:80px"></div><div class="wire-btn" style="width:110px"></div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Join (PIN step)</h4><div contenteditable data-placeholder="Current: 'JOIN' header, 'TABLE 01' heading, keypad layout">JOIN — TABLE 01. Enter the 6‑character PIN on the table tent. First-time players: scan the QR on the tent instead.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Join (PIN)</h4><textarea placeholder="e.g. Keypad buttons could be 20% larger for fat-finger safety on mobile"></textarea></div>
+</div>
+
+<!-- SCREEN 3 — JOIN (ROLE) -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 02b</span><span class="route">Claim role</span></div>
+  <div class="wire">
+    <div class="wire-h2">Claim your role</div>
+    <div class="wire-p short">Players 1, 2 and 3 are required.</div>
+    <div class="wire-box" style="display:flex;justify-content:space-between;align-items:center"><span class="wire-label">ROLE BUTTON</span><div class="wire-row" style="gap:8px"><div class="wire-circle"></div><div class="wire-h2" style="width:90px"></div></div><div class="wire-p short" style="width:50px"></div></div>
+    <div class="wire-box" style="display:flex;justify-content:space-between;align-items:center"><div class="wire-row" style="gap:8px"><div class="wire-circle"></div><div class="wire-h2" style="width:90px"></div></div><div class="wire-p short" style="width:50px"></div></div>
+    <div class="wire-box" style="display:flex;justify-content:space-between;align-items:center"><div class="wire-row" style="gap:8px"><div class="wire-circle"></div><div class="wire-h2" style="width:90px"></div></div><div class="wire-p short" style="width:50px" class="accent-heat"></div></div>
+    <div class="wire-box accent-heat" style="display:flex;justify-content:space-between;align-items:center"><div class="wire-row" style="gap:8px"><div class="wire-circle"></div><div class="wire-h2" style="width:90px"></div></div><div class="wire-p short">taken</div></div>
+    <div class="wire-box" style="display:flex;justify-content:space-between;align-items:center"><div class="wire-row" style="gap:8px"><div class="wire-circle"></div><div class="wire-h2" style="width:130px"></div></div><div class="wire-p short">claim</div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Join (role step)</h4><div contenteditable data-placeholder="Current: 'Claim your role' + 'Players 1, 2 and 3 are required. One dead phone? Claim All roles.'">Claim your role — Players 1, 2 and 3 are required. One phone can claim all five roles.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Join (role)</h4><textarea placeholder="e.g. 'taken' badge should be red, not just text. Consider showing role icons next to names."></textarea></div>
+</div>
+
+<!-- SCREEN 4 — PLAYER 1 (CFO) -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 03 · PLAYER 1</span><span class="route">/play/cfo</span></div>
+  <div class="wire">
+    <div class="wire-row" style="justify-content:space-between"><div class="wire-chip" style="width:70px; background:var(--mist)"></div><div class="wire-chip" style="width:80px; background:var(--mist)"></div></div>
+    <div class="wire-h1" style="width:40%"></div>
+    <div class="wire-box"><div class="wire-label">CAPITAL DISPLAY</div><div class="wire-h2" style="font-family:var(--font-mono)">AED 1,000,000</div><div style="display:flex;gap:4px;margin-top:6px"><div class="wire-chip"></div><div class="wire-chip"></div></div></div>
+    <div class="wire-box"><div class="wire-label">RECENT VERDICTS</div><div class="wire-row"><div class="wire-p short" style="width:120px"></div><div class="wire-p short" style="width:80px; background:var(--green); opacity:0.3"></div></div></div>
+    <div class="wire-box accent-heat" style="padding:10px"><div class="wire-label">📢 BANNER (broadcast)</div><div class="wire-p short" style="background:var(--warn); opacity:0.2"></div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Player 1 screen</h4><div contenteditable data-placeholder="Current: Capital display with AED + badges + leaderboard link. No scanning — pure observer role.">You are Player 1. You hold the ledger and call the strategy. Watch the live leaderboard, decide when your table plays aggressively or safely.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Player 1</h4><textarea placeholder="e.g. The capital number could animate (odometer) when it changes. Add a leaderboard preview panel."></textarea></div>
+</div>
+
+<!-- SCREEN 5 — PLAYER 2 (TAX) -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 04 · PLAYER 2</span><span class="route">/play/tax</span></div>
+  <div class="wire">
+    <div class="wire-box"><div class="wire-label">CAMERA / QR SCANNER</div><div class="wire-camera">📷 Camera viewport — real‑time QR scanning</div></div>
+    <div class="wire-row"><div class="wire-btn" style="width:140px"></div><div class="wire-btn outline" style="width:140px"></div></div>
+    <div class="wire-box solid"><div class="wire-label">LAST SCAN RESULT (if any)</div><div class="wire-h2"></div><div class="wire-p short"></div></div>
+    <div class="wire-box accent-heat"><div class="wire-label">📢 BANNER</div><div class="wire-p short"></div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Player 2 screen</h4><div contenteditable data-placeholder="Current: QR scanner camera view + 'Enter card ID' button + 'FILE' and 'QUARANTINE' buttons after a scan.">Scan the QR on an invoice card. Your phone camera reads it — then you decide FILE or QUARANTINE. Read everything: valid and invalid cards look identical.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Player 2</h4><textarea placeholder="e.g. The FILE/QUARANTINE buttons need stronger contrast — FILE green border, QUARANTINE red border, never colour alone (keep the words)."></textarea></div>
+</div>
+
+<!-- SCREEN 6 — PLAYER 3 (CIO) -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 05 · PLAYER 3</span><span class="route">/play/cio</span></div>
+  <div class="wire">
+    <div class="wire-box"><div class="wire-label">SYSTEM STATUS</div><div class="wire-row"><div class="wire-circle" style="border-color:var(--green); background:var(--green);opacity:0.3"></div><div class="wire-p short">All systems normal</div></div></div>
+    <div class="wire-box accent-heat" style="border-color:var(--danger)"><div class="wire-label" style="color:var(--danger)">⚠️ OUTAGE ACTIVE</div><div class="wire-p short">Capital bleeding −1,000/10s</div><div class="wire-box solid" style="margin-top:8px"><div class="wire-label">OUTAGE QUESTION</div><div class="wire-p short" style="width:80%"></div><div class="wire-btn outline" style="margin-top:8px;width:160px; border-color:var(--danger)"></div></div></div>
+    <div class="wire-box accent-heat"><div class="wire-label">📢 BANNER</div><div class="wire-p short"></div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Player 3 screen</h4><div contenteditable data-placeholder="Current: System status with 'All systems normal' / outage banner with drain counter and answer input.">You own system health. In Phase C outages strike without warning — solve the routing question to stop the capital drain. Every 10 seconds costs your table.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Player 3</h4><textarea placeholder="e.g. During an outage the entire phone screen could tint red (subtle, with a prominent 'RESOLVE NOW' button)."></textarea></div>
+</div>
+
+<!-- SCREEN 7 — PLAYER 4 + 5 (TRADE PORTAL) -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 06 · PLAYER 4 &amp; 5</span><span class="route">/play/procurement · /play/ops</span></div>
+  <div class="wire">
+    <div class="wire-h2">Trade Portal</div>
+    <div class="wire-box"><div class="wire-label">YOU NEED (missing own valids)</div><div class="wire-table"><table><tr><th>Invoice</th><th>Walk to</th></tr><tr><td>V2</td><td>TABLE 05</td></tr><tr><td>V5</td><td>TABLE 03</td></tr></table></div></div>
+    <div class="wire-box"><div class="wire-label">YOU ARE HOLDING (foreigns)</div><div class="wire-table"><table><tr><th>T‑03's</th><th>They need it</th></tr><tr><td>V4</td><td>TABLE 03</td></tr></table></div></div>
+    <div class="wire-p short">You cannot close your ledger from this chair.</div>
+    <div class="wire-box accent-heat"><div class="wire-label">📢 BANNER</div><div class="wire-p short"></div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Player 4/5 screen</h4><div contenteditable data-placeholder="Current: Trade Portal with 'YOU NEED' / 'YOU ARE HOLDING' tables. This is the negotiation screen.">Trade Portal — find invoices that belong to other tables and bring them to the ASP station. Player 4 sources the deals; Player 5 runs the cards. Both tables earn +5,000 on a validated trade.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Player 4/5</h4><textarea placeholder="e.g. Add a 'Deal negotiated?' checklist or a 'Ready to trade' button that queues the ASP station."></textarea></div>
+</div>
+
+<!-- SCREEN 8 — VERDICT MODAL (WHY) -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 07</span><span class="route">WHY modal (after FILE/QUARANTINE)</span></div>
+  <div class="wire">
+    <div class="wire-box" style="text-align:center"><div class="wire-h2" style="margin:0 auto;width:60%"></div><div class="wire-chip" style="width:80px;margin-top:8px; background:var(--green);opacity:0.3"></div></div>
+    <div class="wire-box"><div class="wire-label">VERDICT EXPLANATION</div><div class="wire-p"></div><div class="wire-p"></div><div class="wire-p short" style="margin-top:4px"></div></div>
+    <div class="wire-box"><div class="wire-label">REGULATORY REFERENCE</div><div class="wire-p short"></div></div>
+    <div class="wire-btn" style="width:100%;text-align:center;margin:0 auto">CONTINUE</div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — WHY modal</h4><div contenteditable data-placeholder="Current: 'Correct' / 'Incorrect' heading + regulation text explaining the verdict. The entire training engine lives here.">Correct — this invoice was compliant. All 51 mandatory fields present. Route C1→C3→C4→C2 reported C5. This is where the learning lands — read it every time.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — WHY modal</h4><textarea placeholder="e.g. The correct badge (green) and incorrect (red) need a non‑colour differentiator — an icon. Consider a 'Learn more' link to the full reference sheet."></textarea></div>
+</div>
+
+<!-- SCREEN 9 — PROJECTION -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 08</span><span class="route">/projection</span></div>
+  <div class="wire">
+    <div class="wire-row" style="justify-content:space-between"><div class="wire-chip" style="width:100px"></div><div class="wire-p short" style="width:60px"></div></div>
+    <div class="wire-h1" style="width:40%"></div>
+    <div class="wire-box"><div class="wire-label">LEADERBOARD · 10 TABLES</div>
+    <table class="wire-table"><tr><th>#</th><th>Table</th><th>Capital</th><th>Badges</th></tr>
+    <tr><td>1</td><td>T‑05</td><td>AED 1,050,000</td><td>🔒</td></tr>
+    <tr><td>2</td><td>T‑01</td><td>AED 1,015,000</td><td>🤝</td></tr>
+    <tr><td>3</td><td>T‑03</td><td>AED 988,000</td><td>—</td></tr></table></div>
+    <div class="wire-box"><div class="wire-label">RECENT EVENTS (live ticker)</div><div class="wire-p short"></div><div class="wire-p short" style="margin-top:4px"></div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Projection</h4><div contenteditable data-placeholder="Current: 'Live leaderboard' heading + phase chip + clock + 10‑row table + recent event ticker.">Live leaderboard — the room's score. Top 3 shimmer. Phase chip shows current state. Clock ticks down. Recent events scroll at the bottom. Designed for a ballroom projection screen.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Projection</h4><textarea placeholder="e.g. Top 3 rows should have a subtle glow. The projection background could show the five‑corner constellation faintly. Bigger clock font."></textarea></div>
+</div>
+
+<!-- SCREEN 10 — CONSOLE -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 09</span><span class="route">/console</span></div>
+  <div class="wire">
+    <div class="wire-row" style="gap:8px"><div class="wire-btn" style="width:90px"></div><div class="wire-btn" style="width:90px; background:var(--heat)"></div><div class="wire-btn outline" style="width:70px"></div><div class="wire-btn outline" style="width:80px; border-color:var(--danger)"></div></div>
+    <div class="wire-row" style="gap:8px"><div class="wire-box accent-heat" style="flex:1"><div class="wire-label">ACTIVE TABLES</div><div class="wire-p short"></div></div><div class="wire-box" style="flex:1"><div class="wire-label">RED FLAGS</div><div class="wire-p short"></div></div></div>
+    <div class="wire-box"><div class="wire-label">BROADCAST BAR</div><div class="wire-row" style="gap:8px"><div class="wire-p short" style="flex:1"></div><div class="wire-btn" style="width:80px"></div></div></div>
+    <div class="wire-box"><div class="wire-label">TABLE OVERVIEW · 10 ROWS</div><div class="wire-table"><table><tr><th>Table</th><th>Capital</th><th>Devices</th><th>Badges</th></tr><tr><td>1</td><td>1,000k</td><td>3</td><td>—</td></tr></table></div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Console</h4><div contenteditable data-placeholder="Current: Phase buttons + PAUSE/RESUME + active tables + red flags + broadcast bar + table overview + audit log.">Facilitator console — advance phases, pause/resume, broadcast messages to all tables, adjust capital, force‑resolve outages. Every action requires an audit reason.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Console</h4><textarea placeholder="e.g. The broadcast input should auto‑focus when opened. The table overview rows could be color‑coded by status (green = healthy, orange = bleeding, red = outage)."></textarea></div>
+</div>
+
+<!-- SCREEN 11 — GUIDE -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 10</span><span class="route">/guide</span></div>
+  <div class="wire">
+    <div class="wire-h1" style="width:55%"></div>
+    <div class="wire-p"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="wire-chip" style="width:60px"></div><div class="wire-chip" style="width:80px"></div><div class="wire-chip" style="width:70px"></div></div>
+    <div class="wire-box"><div class="wire-label">SESSION ARC · 6 PHASES</div><div class="wire-p"></div></div>
+    <div class="wire-box"><div class="wire-label">ROLES · 5 PEOPLE</div><div class="wire-row" style="gap:10px"><div class="wire-circle"></div><div class="wire-circle"></div><div class="wire-circle"></div><div class="wire-circle"></div><div class="wire-circle"></div></div></div>
+    <div class="wire-box"><div class="wire-label">SCORING TABLE</div><div class="wire-table"><table><tr><th>Decision</th><th>Impact</th></tr><tr><td>FILE valid</td><td>+50k</td></tr></table></div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Guide</h4><div contenteditable data-placeholder="Current: Full session arc + 5 role descriptions + scoring table + facilitator checklist + emergency FAQ.">Game guide — the full session arc from LOBBY to DEBRIEF, role descriptions, scoring rules, and facilitator emergency playbook. Players and facilitators read this before the event.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Guide</h4><textarea placeholder="e.g. Phase timeline could be a horizontal stepper not a vertical list. Add 'back to game' button for phones that drift here mid‑session."></textarea></div>
+</div>
+
+<!-- SCREEN 12 — DEBRIEF -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 11</span><span class="route">/console?tab=debrief</span></div>
+  <div class="wire">
+    <div class="wire-h1" style="width:40%"></div>
+    <div class="wire-box"><div class="wire-label">TOTAL ROOM FINES</div><div class="wire-h2" style="font-family:var(--font-mono);font-size:28px;color:var(--danger)">AED —,———,———</div></div>
+    <div class="wire-box"><div class="wire-label">MOST‑MISSED TRAP</div><div class="wire-h2"></div><div class="wire-p short"></div></div>
+    <div class="wire-box"><div class="wire-label">ALLIANCE BUILDER</div><div class="wire-p short">Table with most trades</div></div>
+    <div class="wire-box accent-blue"><div class="wire-label">GRN‑04 · AI‑OCR</div><div class="wire-p short">"One card, one table, would have done all of this in 2 seconds."</div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — Debrief</h4><div contenteditable data-placeholder="Current: Total fines + most-missed trap + alliance builder + GRN-04 spotlight + room numbers summary.">Debrief — the room's own data tells the story. Total fines, the most‑missed trap, the alliance builder, and GRN‑04: the KamelPay payload. Close: 'You just proved that reading invoices under pressure is a skill — and the right tool makes it automatic.'</div></div>
+  <div class="design-feedback"><h4>🎨 Design — Debrief</h4><textarea placeholder="e.g. The total fines number should animate up (like a fundraiser thermometer). Each stat should have a 'share to projection' button."></textarea></div>
+</div>
+
+<!-- SCREEN 13 — ALL ROLES (single device) -->
+<div class="screen">
+  <div class="screen-header"><span class="role">SCREEN 12</span><span class="route">/play/all_roles</span></div>
+  <div class="wire">
+    <div class="wire-h2">All roles — Table 01</div>
+    <div class="wire-p short">One phone, all five roles.</div>
+    <div class="wire-box" style="display:flex;justify-content:space-between"><div class="wire-p short" style="width:120px"></div><div class="wire-btn outline" style="width:60px"></div></div>
+    <div class="wire-box" style="display:flex;justify-content:space-between"><div class="wire-p short" style="width:120px"></div><div class="wire-btn outline" style="width:60px"></div></div>
+    <div class="wire-box" style="display:flex;justify-content:space-between"><div class="wire-p short" style="width:120px"></div><div class="wire-btn outline" style="width:60px"></div></div>
+    <div class="wire-box" style="display:flex;justify-content:space-between"><div class="wire-p short" style="width:120px"></div><div class="wire-btn outline" style="width:60px"></div></div>
+    <div class="wire-box" style="display:flex;justify-content:space-between"><div class="wire-p short" style="width:120px"></div><div class="wire-btn outline" style="width:60px"></div></div>
+    <div class="wire-box accent-heat"><div class="wire-label">📢 BANNER</div><div class="wire-p short"></div></div>
+  </div>
+  <div class="editable"><h4>✏️ Comms — All roles</h4><div contenteditable data-placeholder="Current: Hub page with 5 links — Player 1 (Balance sheet), Player 2 (Scanner), Player 3 (Systems), Player 4 (Trade), Player 5 (Trade).">All roles hub — one device claimed every role. Tap any role to open its screen. Designed for small tables or phones where a player wears multiple hats.</div></div>
+  <div class="design-feedback"><h4>🎨 Design — All roles</h4><textarea placeholder="e.g. Add a summary bar at the top showing capital + active phase so the player knows the state before picking a screen."></textarea></div>
+</div>
+
+</div><!-- .grid -->
+
+<div class="legend">
+  <span><span class="swatch" style="background:var(--signal)"></span> Comms edit box (blue border)</span>
+  <span><span class="swatch" style="background:var(--heat)"></span> Design feedback box (orange border)</span>
+  <span><span class="swatch" style="background:var(--mist)"></span> Wireframe placeholder (grey box)</span>
+  <span><span class="swatch" style="background:var(--line)"></span> Dashed = empty state / inactive</span>
+  <span><span class="swatch" style="background:var(--green); opacity:0.5"></span> Positive / correct</span>
+  <span><span class="swatch" style="background:var(--danger); opacity:0.5"></span> Negative / warning / outage</span>
+</div>
+</body>
+</html>
